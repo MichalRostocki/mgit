@@ -25,7 +25,7 @@ private:
 	class StatusTaskRunner final : public TaskRunner
 	{
 	public:
-		StatusTaskRunner(const RepoConfig& repo_config, StatusRepoData* data);
+		StatusTaskRunner(const RepoConfig& repo, StatusRepoData* data);
 
 		void Run() override;
 

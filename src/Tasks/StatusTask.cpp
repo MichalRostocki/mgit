@@ -82,12 +82,6 @@ void StatusTask::StatusTaskRunner::Run()
 
     TASK_RUNNER_CHECK
 
-    for (int i = 0; i < 30; ++i)
-    {
-    	std::this_thread::sleep_for(std::chrono::seconds{ 1 });
-        TASK_RUNNER_CHECK
-    }
-
     auto branch_data = git.GetBranchData();
     if(branch_data.failed)
     {
