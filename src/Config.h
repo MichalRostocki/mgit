@@ -3,18 +3,18 @@
 
 struct RepoConfig
 {
-    std::string Path;
-    std::string DefaultBranch;
-    bool Priority = false;
+    std::string path;
+    std::string default_branch;
+    bool hidden = false;
 };
 
 struct Config
 {
-    std::vector<RepoConfig> Repositories;
+    std::vector<RepoConfig> repositories;
 
     bool IsValid() const
     {
-        return !Repositories.empty();
+        return !repositories.empty();
     }
 };
 

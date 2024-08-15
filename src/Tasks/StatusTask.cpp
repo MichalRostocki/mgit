@@ -92,6 +92,11 @@ bool StatusTask::ShouldExit()
     return true;
 }
 
+bool StatusTask::IncludesHidden()
+{
+    return false;
+}
+
 StatusTask::StatusTaskRunner::StatusTaskRunner(const RepoConfig& repo, StatusRepoData* data) :
 	TaskRunner(repo),
 	data(data)
@@ -103,7 +108,7 @@ void StatusTask::StatusTaskRunner::Run()
 {
     GitLibLock git;
 
-    if(!git.OpenRepo(repo_config.Path))
+    if(!git.OpenRepo(repo_config.path))
     {
         data->is_repo_found = false;
         GitError();

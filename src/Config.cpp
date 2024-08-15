@@ -3,14 +3,14 @@
 // ReSharper disable once CppInconsistentNaming
 void from_json(const nlohmann::json& j, RepoConfig& p)
 {
-    j.at("path").get_to(p.Path);
-    j.at("default_branch").get_to(p.DefaultBranch);
-    if (j.contains("priority"))
-        j.at("priority").get_to(p.Priority);
+    j.at("path").get_to(p.path);
+    j.at("default_branch").get_to(p.default_branch);
+    if (j.contains("hidden"))
+        j.at("hidden").get_to(p.hidden);
 }
 
 // ReSharper disable once CppInconsistentNaming
 void from_json(const nlohmann::json& j, Config& p)
 {
-    j.at("repositories").get_to(p.Repositories);
+    j.at("repositories").get_to(p.repositories);
 }

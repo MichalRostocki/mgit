@@ -42,7 +42,7 @@ bool MultiController::LoadConfig(std::ostream& error_stream)
 
     config = data.get<Config>();
 
-    return !config.Repositories.empty();
+    return !config.repositories.empty();
 }
 
 void MultiController::DisplayStatus(std::ostream& output_stream) const

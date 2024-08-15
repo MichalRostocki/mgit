@@ -11,10 +11,11 @@ Task::~Task()
 
 void Task::Register(const Config& config)
 {
-	for (const auto& repo_config : config.Repositories)
+	for (const auto& repo_config : config.repositories)
 	{
-		if (auto runner = RegisterRepo(repo_config))
-			runners.emplace_back(std::move(runner));
+        if(IncludesHidden() || !repo_config.hidden)
+			if (auto runner = RegisterRepo(repo_config))
+				runners.emplace_back(std::move(runner));
 	}
 }
 
@@ -48,7 +49,7 @@ void Task::Process(std::ostream& output_stream)
 
 Task::TaskRunner::TaskRunner(const RepoConfig& repo_config) :
     repo_config(repo_config),
-    repo_name(std::filesystem::path{ repo_config.Path }.filename().string())
+    repo_name(std::filesystem::path{ repo_config.path }.filename().string())
 {
 }
 

@@ -57,6 +57,7 @@ protected:
 	virtual size_t Display(std::ostream& output_stream) = 0;
 	virtual void OnAllReposRegistered() = 0;
 	virtual bool ShouldExit() = 0;
+	virtual bool IncludesHidden() = 0;
 
 private:
 	void StopProcedure();
