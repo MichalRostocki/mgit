@@ -18,8 +18,15 @@ private:
 
 		bool is_repo_found = true;
 		bool is_repo_detached = false;
+
+		bool no_of_files_complete = false;
+
 		std::string current_branch;
 		std::string repo_name;
+
+		size_t files_added = 0;
+		size_t files_modified = 0;
+		size_t files_deleted = 0;
 	};
 
 	class StatusTaskRunner final : public TaskRunner

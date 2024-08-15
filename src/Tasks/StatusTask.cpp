@@ -17,7 +17,21 @@ void StatusTask::OnAllReposRegistered()
 
 size_t StatusTask::Display(std::ostream& output_stream)
 {
-	const auto data_copy = repositories_data;
+    const auto data_copy = repositories_data;
+
+    size_t max_size_of_branch_names = 11;
+    for (const auto& data : data_copy)
+    {
+        if (!data.current_branch.empty())
+        {
+            size_t size_of_branch_name = data.current_branch.size() + 8;
+            if (data.is_repo_detached)
+                size_of_branch_name += 11;
+
+            max_size_of_branch_names = std::max(max_size_of_branch_names, size_of_branch_name);
+        }
+    }
+    max_size_of_branch_names += 4;
 
 	for (const auto & data : data_copy)
 	{
@@ -29,17 +43,33 @@ size_t StatusTask::Display(std::ostream& output_stream)
 
         if (data.is_repo_found)
         {
+            size_t repo_branch_size = 8;
             output_stream << "branch: ";
 
             if (data.current_branch.empty())
             {
                 output_stream << "...";
+                repo_branch_size += 3;
             }
             else
             {
                 output_stream << data.current_branch;
+                repo_branch_size += data.current_branch.size();
+
                 if (data.is_repo_detached)
+                {
                     output_stream << " (DETACHED)";
+                    repo_branch_size += 11;
+                }
+            }
+
+            if (data.no_of_files_complete)
+            {
+                auto missing_spaces = max_size_of_branch_names - repo_branch_size;
+                while (missing_spaces--)
+                    output_stream << ' ';
+
+                output_stream << "A: " << data.files_added << " M: " << data.files_modified << " D: " << data.files_deleted;
             }
         }
         else
@@ -91,6 +121,20 @@ void StatusTask::StatusTaskRunner::Run()
 
     data->is_repo_detached = branch_data.is_detached;
     data->current_branch = std::move(branch_data.branch_or_sha);
+
+    TASK_RUNNER_CHECK
+
+    const auto file_mode_stats = git.GetFileModificationStats();
+    if(file_mode_stats.failed)
+    {
+        GitError();
+    	return;
+    }
+
+    data->files_added = file_mode_stats.added;
+    data->files_modified = file_mode_stats.modified;
+    data->files_deleted = file_mode_stats.deleted;
+    data->no_of_files_complete = true;
 
     data->is_complete = true;
 }

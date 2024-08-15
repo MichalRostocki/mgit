@@ -12,6 +12,9 @@ GitLibLock::~GitLibLock()
 	if (head)
 		git_reference_free(head);
 
+	if (status_list)
+		git_status_list_free(status_list);
+
 	if (repository)
 		git_repository_free(repository);
 
@@ -51,6 +54,34 @@ GitLibLock::GitBranchStatus GitLibLock::GetBranchData()
 		result.branch_or_sha = git_reference_shorthand(head);
 	}
 
+	return result;
+}
+
+GitLibLock::GitFileStats GitLibLock::GetFileModificationStats()
+{
+	constexpr static git_status_options Opts = GIT_STATUS_OPTIONS_INIT;
+
+	if (!repository)
+		return {};
+
+	if (git_status_list_new(&status_list, repository, &Opts) != GIT_ERROR_NONE)
+		return {};
+
+	GitFileStats result;
+
+	const size_t end = git_status_list_entrycount(status_list);
+	for (size_t i = 0; i < end; ++i)
+	{
+		const auto* entry = git_status_byindex(status_list, i);
+		if (entry->status & GIT_STATUS_WT_NEW)
+			result.added++;
+		if (entry->status & (GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_TYPECHANGE | GIT_STATUS_WT_RENAMED))
+			result.modified++;
+		if (entry->status & GIT_STATUS_WT_DELETED)
+			result.deleted++;
+	}
+
+	result.failed = false;
 	return result;
 }
 
