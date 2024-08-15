@@ -3,8 +3,9 @@
 #include <fstream>
 
 #include "Config.h"
+#include "Tasks/StatusTask.h"
 
-constexpr auto ConfigFilePathAppendix = R"(.config\mgit\repos.json)";
+constexpr auto ConfigFilePathAppendix = R"(\.config\mgit\repos.json)";
 
 namespace OutputControl
 {
@@ -39,99 +40,22 @@ bool MultiController::LoadConfig(std::ostream& error_stream)
     const nlohmann::json data = nlohmann::json::parse(f);
     f.close();
 
-    const auto config = data.get<Config>();
-    for (const auto& repo_config : config.Repositories)
-    {
-        controllers.emplace_back(repo_config);
-        if(controllers.back().IsValid())
-        {
-            error_stream << "Repository " << repo_config.Path
-                << " was not found";
-        }
-    }
+    config = data.get<Config>();
 
-    return true;
+    return !config.Repositories.empty();
 }
 
 void MultiController::DisplayStatus(std::ostream& output_stream) const
 {
-    output_stream << "Found " << controllers.size() << " repositories" << std::endl;
-
-    size_t name_space = 0;
-
-    for (const auto & controller : controllers)
-        name_space = std::max(controller.GetRepoName().size(), name_space);
-    name_space += 4;
-
-    bool is_finished;
-
-    do
-    {
-        is_finished = true;
-        OutputControl::MoveCursorUp(output_stream, controllers.size());
-
-        for (const auto& controller : controllers)
-        {
-            OutputControl::ClearLine(output_stream);
-
-            const auto name = controller.GetRepoName();
-            output_stream << ' ' << name;
-
-            const auto spaces_needed = name_space - name.size();
-            for (size_t i = 0; i < spaces_needed; ++i)
-                output_stream << ' ';
-
-            if (controller.IsValid())
-            {
-                if (!controller.IsDataReady())
-                    is_finished = false;
-
-                output_stream << "branch: ";
-
-                if (const auto branch = controller.GetRepoCurrentBranch();
-                    branch.empty())
-                {
-                    output_stream << "...";
-                }
-                else
-                {
-                    output_stream << branch;
-                    if (controller.IsRepoDetached())
-                        output_stream << " (DETACHED)";
-                }
-            }
-            else
-            {
-                output_stream << "- repository not found!";
-            }
-
-            output_stream << std::endl;
-        }
-
-        if (!is_finished)
-            std::this_thread::sleep_for(std::chrono::milliseconds{100});
-
-    } while (!is_finished);
+    StatusTask task;
+    RunTask(&task, output_stream);
 }
 
-MultiController::~MultiController()
+void MultiController::RunTask(Task* task, std::ostream& output_stream) const
 {
-    constexpr auto max_step = 10;
-    auto step = 0;
-    bool all_joined;
+    if (!task)
+        return;
 
-    do
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds{ 2 * step });
-        all_joined = true;
-
-        for (const auto & controller : controllers)
-        {
-            if (!controller.IsWorkerThreadFinished())
-                all_joined = false;
-        }
-
-        step++;
-
-    } while (!all_joined && max_step != step);
+    task->Register(config);
+    task->Process(output_stream);
 }

@@ -9,7 +9,9 @@ set(HEADERS
     src/GitLibLock.h
     src/json.hpp
     src/MultiController.h
-    src/RepositoryController.h
+
+    src/Tasks/StatusTask.h
+    src/Tasks/Task.h
 )
 
 set(SOURCES
@@ -17,7 +19,9 @@ set(SOURCES
     src/GitLibLock.cpp
     src/main.cpp
     src/MultiController.cpp
-    src/RepositoryController.cpp
+
+    src/Tasks/StatusTask.cpp
+    src/Tasks/Task.cpp
 )
 
 add_executable(
@@ -30,3 +34,6 @@ set_property(TARGET mgit PROPERTY CXX_STANDARD 23)
 
 target_include_directories(mgit PUBLIC ${LIBGIT2_INCLUDE_DIRS})
 target_link_libraries(mgit ${LIBGIT2_LIB_DIRS}/git2.lib WinHttp rpcrt4 crypt32)
+
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" PREFIX "Headers" FILES ${HEADERS})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" PREFIX "Source" FILES ${SOURCES})
