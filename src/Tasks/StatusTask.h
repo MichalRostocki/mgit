@@ -20,6 +20,7 @@ private:
 		bool is_repo_found = true;
 		bool is_repo_detached = false;
 
+		bool no_of_files_started = false;
 		bool no_of_files_complete = false;
 
 		std::string current_branch;

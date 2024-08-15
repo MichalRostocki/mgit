@@ -11,16 +11,13 @@ struct git_status_list;
 class GitLibLock
 {
 public:
-	struct GitBranchStatus;
-	struct GitFileStats;
-
 	GitLibLock();
 	~GitLibLock();
 
 	bool OpenRepo(const std::string_view& path);
 	
-	GitBranchStatus GetBranchData();
-	GitFileStats GetFileModificationStats();
+	bool GetBranchData(bool& is_detached, std::string& branch_or_sha);
+	bool GetFileModificationStats(const bool& interrupt, size_t& added, size_t& modified, size_t deleted);
 
 	GitLibLock(const GitLibLock& other) = delete;
 	GitLibLock(GitLibLock&& other) noexcept = delete;
@@ -33,23 +30,5 @@ private:
 	git_status_list* status_list = nullptr;
 
 	bool GetHead();
-
-public:
-
-	struct GitBranchStatus
-	{
-		std::string branch_or_sha;
-		bool failed = true;
-		bool is_detached = false;
-	};
-
-	struct GitFileStats
-	{
-		bool failed = true;
-
-		size_t added = 0;
-		size_t modified = 0;
-		size_t deleted = 0;
-	};
 };
 

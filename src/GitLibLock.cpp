@@ -29,60 +29,58 @@ bool GitLibLock::OpenRepo(const std::string_view& path)
 	return git_repository_open_ext(&repository, path.data(), GIT_REPOSITORY_OPEN_NO_SEARCH, "") == GIT_ERROR_NONE;
 }
 
-GitLibLock::GitBranchStatus GitLibLock::GetBranchData()
+bool GitLibLock::GetBranchData(bool& is_detached, std::string& branch_or_sha)
 {
 	if (!repository)
-		return {};
+		return false;
 
 	if (!head)
 		if (!GetHead())
-			return {};
+			return false;
 
-	GitBranchStatus result;
-	result.is_detached = !git_reference_is_branch(head);
-	result.failed = false;
+	is_detached = !git_reference_is_branch(head);
 
-	if (result.is_detached)
+	if (is_detached)
 	{
 		char sha[GIT_OID_SHA1_HEXSIZE + 1];
 		const git_oid* oid = git_reference_target(head);
 		git_oid_tostr(sha, sizeof(sha), oid);
-		result.branch_or_sha = sha;
+		branch_or_sha = sha;
 	}
 	else
 	{
-		result.branch_or_sha = git_reference_shorthand(head);
+		branch_or_sha = git_reference_shorthand(head);
 	}
 
-	return result;
+	return true;
 }
 
-GitLibLock::GitFileStats GitLibLock::GetFileModificationStats()
+bool GitLibLock::GetFileModificationStats(const bool& interrupt, size_t& added, size_t& modified, size_t deleted)
 {
 	constexpr static git_status_options Opts = GIT_STATUS_OPTIONS_INIT;
 
 	if (!repository)
-		return {};
+		return false;
 
 	if (git_status_list_new(&status_list, repository, &Opts) != GIT_ERROR_NONE)
-		return {};
-
-	GitFileStats result;
+		return false;
 
 	const size_t end = git_status_list_entrycount(status_list);
 	for (size_t i = 0; i < end; ++i)
 	{
+		if (interrupt)
+			return true;
+
 		const auto* entry = git_status_byindex(status_list, i);
 		if (entry->status & GIT_STATUS_WT_NEW)
-			result.added++;
+			added++;
 		if (entry->status & (GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_TYPECHANGE | GIT_STATUS_WT_RENAMED))
-			result.modified++;
+			modified++;
 		if (entry->status & GIT_STATUS_WT_DELETED)
-			result.deleted++;
+			deleted++;
 	}
 
-	result.failed = false;
-	return result;
+	return true;
 }
 
 bool GitLibLock::GetHead()

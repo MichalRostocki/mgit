@@ -43,33 +43,35 @@ size_t StatusTask::Display(std::ostream& output_stream)
 
         if (data.is_repo_found)
         {
-            size_t repo_branch_size = 8;
-            output_stream << "branch: ";
+	        output_stream << "branch: ";
 
             if (data.current_branch.empty())
             {
                 output_stream << "...";
-                repo_branch_size += 3;
             }
             else
             {
-                output_stream << data.current_branch;
-                repo_branch_size += data.current_branch.size();
+                auto repo_branch_size = data.current_branch.size() + 8;
+	            output_stream << data.current_branch;
 
                 if (data.is_repo_detached)
                 {
                     output_stream << " (DETACHED)";
                     repo_branch_size += 11;
                 }
-            }
 
-            if (data.no_of_files_complete)
-            {
-                auto missing_spaces = max_size_of_branch_names - repo_branch_size;
-                while (missing_spaces--)
-                    output_stream << ' ';
+                if (data.no_of_files_complete)
+                {
+                    auto missing_spaces = max_size_of_branch_names - repo_branch_size;
+                    while (missing_spaces--)
+                    {
+                        output_stream << ' ';
+                    }
 
-                output_stream << "A: " << data.files_added << " M: " << data.files_modified << " D: " << data.files_deleted;
+                	output_stream << "A: " << data.files_added
+                				  << " M: " << data.files_modified
+                				  << " D: " << data.files_deleted;
+                }
             }
         }
         else
@@ -117,28 +119,19 @@ void StatusTask::StatusTaskRunner::Run()
 
     TASK_RUNNER_CHECK
 
-    auto branch_data = git.GetBranchData();
-    if(branch_data.failed)
+    if(!git.GetBranchData(data->is_repo_detached, data->current_branch))
     {
         GitError();
     	return;
     }
-
-    data->is_repo_detached = branch_data.is_detached;
-    data->current_branch = std::move(branch_data.branch_or_sha);
 
     TASK_RUNNER_CHECK
-
-    const auto file_mode_stats = git.GetFileModificationStats();
-    if(file_mode_stats.failed)
+        
+    if(!git.GetFileModificationStats(should_stop, data->files_added, data->files_modified, data->files_deleted))
     {
         GitError();
     	return;
     }
-
-    data->files_added = file_mode_stats.added;
-    data->files_modified = file_mode_stats.modified;
-    data->files_deleted = file_mode_stats.deleted;
     data->no_of_files_complete = true;
 
     data->is_complete = true;
