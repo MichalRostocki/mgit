@@ -43,7 +43,7 @@ size_t StatusTask::Display(std::ostream& output_stream)
 
         if (data.is_repo_found)
         {
-	        output_stream << "branch: ";
+	        output_stream << "branch:";
 
             if (data.current_branch.empty())
             {
@@ -51,6 +51,10 @@ size_t StatusTask::Display(std::ostream& output_stream)
             }
             else
             {
+                if (data.current_branch == data.default_branch)
+                    output_stream << ' ';
+                else output_stream << '*';
+
                 auto repo_branch_size = data.current_branch.size() + 8;
 	            output_stream << data.current_branch;
 
@@ -68,7 +72,7 @@ size_t StatusTask::Display(std::ostream& output_stream)
                         output_stream << ' ';
                     }
 
-                	output_stream << "A: " << data.files_added
+                	output_stream <<  "A: " << data.files_added
                 				  << " M: " << data.files_modified
                 				  << " D: " << data.files_deleted;
                 }
@@ -104,6 +108,7 @@ StatusTask::StatusTaskRunner::StatusTaskRunner(const RepoConfig& repo, StatusRep
 	data(data)
 {
     data->repo_name = GetRepoName();
+    data->default_branch = repo.default_branch;
 }
 
 void StatusTask::StatusTaskRunner::Run()
