@@ -48,8 +48,7 @@ void Task::Process(std::ostream& output_stream)
 }
 
 Task::TaskRunner::TaskRunner(const RepoConfig& repo_config) :
-    repo_config(repo_config),
-    repo_name(std::filesystem::path{ repo_config.path }.filename().string())
+    repo_config(repo_config)
 {
 }
 
@@ -58,9 +57,9 @@ void Task::TaskRunner::Stop()
     should_stop = true;
 }
 
-std::string_view Task::TaskRunner::GetRepoName() const
+std::string Task::TaskRunner::GetRepoName() const
 {
-    return repo_name;
+    return repo_config.GetRepoName();
 }
 
 void Task::ClearCurrentLine(std::ostream& output_stream)

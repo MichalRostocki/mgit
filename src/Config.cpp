@@ -1,5 +1,10 @@
 #include "Config.h"
 
+std::string RepoConfig::GetRepoName() const
+{
+    return std::filesystem::path{ path }.filename().string();
+}
+
 // ReSharper disable once CppInconsistentNaming
 void from_json(const nlohmann::json& j, RepoConfig& p)
 {

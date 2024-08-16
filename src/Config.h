@@ -6,6 +6,9 @@ struct RepoConfig
     std::string path;
     std::string default_branch;
     bool hidden = false;
+
+    // calculated
+    std::string GetRepoName() const;
 };
 
 struct Config

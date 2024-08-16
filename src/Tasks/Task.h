@@ -37,11 +37,10 @@ protected:
 		virtual void Run() = 0;
 
 		void Stop();
-		std::string_view GetRepoName() const;
+		std::string GetRepoName() const;
 
 	protected:
 		const RepoConfig& repo_config;
-		const std::string repo_name;
 
 		bool should_stop = false;
 	};

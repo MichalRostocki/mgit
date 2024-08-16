@@ -51,6 +51,19 @@ void MultiController::DisplayStatus(std::ostream& output_stream) const
     RunTask(&task, output_stream);
 }
 
+const RepoConfig* MultiController::GetRepo(const std::string_view& repo_name) const
+{
+	for (const auto & repo_config : config.repositories)
+	{
+        if(repo_config.GetRepoName() == repo_name)
+        {
+            return &repo_config;
+        }
+	}
+
+	return nullptr;
+}
+
 void MultiController::RunTask(Task* task, std::ostream& output_stream) const
 {
     if (!task)

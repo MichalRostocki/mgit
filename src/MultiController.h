@@ -9,6 +9,9 @@ public:
     bool LoadConfig(std::ostream& error_stream);
 
     void DisplayStatus(std::ostream& output_stream) const;
+
+    const RepoConfig* GetRepo(const std::string_view& repo_name) const;
+
 private:
     Config config;
 
