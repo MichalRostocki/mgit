@@ -11,7 +11,7 @@ std::unique_ptr<Task::TaskRunner> StatusTask::RegisterRepo(const RepoConfig& rep
 void StatusTask::OnAllReposRegistered()
 {
     for (const auto& data : repositories_data)
-        max_name_space = std::max(data.repo_name.size(), max_name_space);
+        max_name_space = std::max(data.repo_config->repo_name.size(), max_name_space);
     max_name_space += 4;
 }
 
@@ -27,6 +27,7 @@ size_t StatusTask::Display(std::ostream& output_stream)
             size_t size_of_branch_name = data.current_branch.size() + 8;
             if (data.is_repo_detached)
                 size_of_branch_name += 11;
+            size_of_branch_name += 2ull * data.repo_config->sub_repo_level;
 
             max_size_of_branch_names = std::max(max_size_of_branch_names, size_of_branch_name);
         }
@@ -35,9 +36,14 @@ size_t StatusTask::Display(std::ostream& output_stream)
 
 	for (const auto & data : data_copy)
 	{
-        output_stream << ' ' << data.repo_name;
+        const auto& repo_config = *data.repo_config;
 
-        const auto spaces_needed = max_name_space - data.repo_name.size();
+        for (int i = 0; i < repo_config.sub_repo_level * 2; ++i)
+            output_stream << ' ';
+
+        output_stream << ' ' << repo_config.repo_name;
+
+        const auto spaces_needed = max_name_space - (repo_config.repo_name.size() + 2ull * repo_config.sub_repo_level);
         for (size_t i = 0; i < spaces_needed; ++i)
             output_stream << ' ';
 
@@ -51,7 +57,7 @@ size_t StatusTask::Display(std::ostream& output_stream)
             }
             else
             {
-                if (data.current_branch == data.default_branch)
+                if (data.current_branch == data.repo_config->default_branch)
                     output_stream << ' ';
                 else output_stream << '*';
 
@@ -103,12 +109,16 @@ bool StatusTask::IncludesHidden()
     return false;
 }
 
+bool StatusTask::IncludesSubRepos()
+{
+    return true;
+}
+
 StatusTask::StatusTaskRunner::StatusTaskRunner(const RepoConfig& repo, StatusRepoData* data) :
 	TaskRunner(repo),
 	data(data)
 {
-    data->repo_name = GetRepoName();
-    data->default_branch = repo.default_branch;
+    data->repo_config = &repo;
 }
 
 void StatusTask::StatusTaskRunner::Run()

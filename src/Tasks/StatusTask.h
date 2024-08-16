@@ -9,11 +9,15 @@ protected:
 	void OnAllReposRegistered() override;
 	size_t Display(std::ostream& output_stream) override;
 	bool ShouldExit() override;
+
 	bool IncludesHidden() override;
+	bool IncludesSubRepos() override;
 
 private:
 	struct StatusRepoData
 	{
+		const RepoConfig* repo_config = nullptr;
+
 		bool is_complete = false;
 		bool error_encountered = false;
 
@@ -23,8 +27,6 @@ private:
 		bool no_of_files_started = false;
 		bool no_of_files_complete = false;
 
-		std::string repo_name;
-		std::string default_branch;
 		std::string current_branch;
 
 		size_t files_added = 0;

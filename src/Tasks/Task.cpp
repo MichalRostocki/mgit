@@ -12,11 +12,7 @@ Task::~Task()
 void Task::Register(const Config& config)
 {
 	for (const auto& repo_config : config.repositories)
-	{
-        if(IncludesHidden() || !repo_config.hidden)
-			if (auto runner = RegisterRepo(repo_config))
-				runners.emplace_back(std::move(runner));
-	}
+        Register(repo_config);
 }
 
 void Task::Process(std::ostream& output_stream)
@@ -57,14 +53,24 @@ void Task::TaskRunner::Stop()
     should_stop = true;
 }
 
-std::string Task::TaskRunner::GetRepoName() const
-{
-    return repo_config.GetRepoName();
-}
-
 void Task::ClearCurrentLine(std::ostream& output_stream)
 {
     output_stream << "\33[2K\r";
+}
+
+void Task::Register(const RepoConfig& config)
+{
+    if (IncludesHidden() || !config.hidden)
+    {
+        if (auto runner = RegisterRepo(config))
+        {
+            runners.emplace_back(std::move(runner));
+
+            if (IncludesSubRepos())
+                for (const auto& sub_repo : config.sub_repos)
+                    Register(sub_repo);
+        }
+    }
 }
 
 void Task::StopProcedure()

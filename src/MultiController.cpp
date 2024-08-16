@@ -42,7 +42,7 @@ bool MultiController::LoadConfig(std::ostream& error_stream)
 
     config = data.get<Config>();
 
-    return !config.repositories.empty();
+    return config.Validate();
 }
 
 void MultiController::DisplayStatus(std::ostream& output_stream) const
@@ -55,7 +55,7 @@ const RepoConfig* MultiController::GetRepo(const std::string_view& repo_name) co
 {
 	for (const auto & repo_config : config.repositories)
 	{
-        if(repo_config.GetRepoName() == repo_name)
+        if(repo_config.repo_name == repo_name)
         {
             return &repo_config;
         }

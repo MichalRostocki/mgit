@@ -8,6 +8,7 @@ class RepositoryController;
 
 class Task
 {
+protected:
 	class TaskRunner;
 
 public:
@@ -19,8 +20,8 @@ public:
 	Task() = default;
 	virtual ~Task();
 
-	virtual void Register(const Config& config);
-	virtual void Process(std::ostream& output_stream);
+	void Register(const Config& config);
+	void Process(std::ostream& output_stream);
 
 protected:
 	class TaskRunner
@@ -37,7 +38,6 @@ protected:
 		virtual void Run() = 0;
 
 		void Stop();
-		std::string GetRepoName() const;
 
 	protected:
 		const RepoConfig& repo_config;
@@ -56,9 +56,12 @@ protected:
 	virtual size_t Display(std::ostream& output_stream) = 0;
 	virtual void OnAllReposRegistered() = 0;
 	virtual bool ShouldExit() = 0;
-	virtual bool IncludesHidden() = 0;
+
+	virtual bool IncludesHidden() { return false; }
+	virtual bool IncludesSubRepos() { return false; }
 
 private:
+	void Register(const RepoConfig& config);
 	void StopProcedure();
 };
 

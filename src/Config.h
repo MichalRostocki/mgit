@@ -7,18 +7,20 @@ struct RepoConfig
     std::string default_branch;
     bool hidden = false;
 
+    std::vector<RepoConfig> sub_repos;
+
     // calculated
-    std::string GetRepoName() const;
+    std::string repo_name;
+    uint8_t sub_repo_level = 0;
+
+    bool Validate();
 };
 
 struct Config
 {
     std::vector<RepoConfig> repositories;
 
-    bool IsValid() const
-    {
-        return !repositories.empty();
-    }
+    bool Validate();
 };
 
 // ReSharper disable once CppInconsistentNaming
