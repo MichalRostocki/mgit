@@ -21,8 +21,7 @@ int DisplayStatus()
         return 1;
     }
 
-    ctr.DisplayStatus(std::cout);
-    return 0;
+    return ctr.DisplayStatus(std::cout);
 }
 
 int TryRunGitCli(const RepoConfig* repo_config, const std::vector<std::string>& args)
@@ -59,12 +58,28 @@ int TryActivateRepo(const std::string_view& repo_name, const std::vector<std::st
     return 1;
 }
 
+int BuildRepos()
+{
+    MultiController ctr;
+    std::ostringstream error_stream;
+
+    if (!ctr.LoadConfig(error_stream))
+    {
+        std::cout << error_stream.rdbuf();
+        return 1;
+    }
+
+    return ctr.Build(std::cout);
+}
+
 int HandleCommand(const std::string_view& command, const std::vector<std::string>& args)
 {
     if(command == "help")
         return ShowUsage();
     if (command == "status")
         return DisplayStatus();
+    if (command == "build")
+        return BuildRepos();
 
     return TryActivateRepo(command, args);
 }

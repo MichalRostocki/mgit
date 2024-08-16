@@ -4,14 +4,14 @@
 
 class StatusTask final : public Task
 {
+public:
+	bool IsSuccessful() override;
+
 protected:
 	std::unique_ptr<TaskRunner> RegisterRepo(const RepoConfig& repository) override;
 	void OnAllReposRegistered() override;
 	size_t Display(std::ostream& output_stream) override;
 	bool ShouldExit() override;
-
-	bool IncludesHidden() override;
-	bool IncludesSubRepos() override;
 
 private:
 	struct StatusRepoData

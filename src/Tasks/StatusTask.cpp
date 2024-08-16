@@ -3,8 +3,22 @@
 #include "../Config.h"
 #include "../GitLibLock.h"
 
+bool StatusTask::IsSuccessful()
+{
+	for (const auto & data : repositories_data)
+	{
+        if (!data.is_complete || !data.is_repo_found)
+            return false;
+	}
+
+    return true;
+}
+
 std::unique_ptr<Task::TaskRunner> StatusTask::RegisterRepo(const RepoConfig& repository)
 {
+    if (repository.hidden)
+        return nullptr;
+
 	return std::make_unique<StatusTaskRunner>(repository, &repositories_data.emplace_back());
 }
 
@@ -101,16 +115,6 @@ bool StatusTask::ShouldExit()
         if (!data.is_complete)
             return false;
 
-    return true;
-}
-
-bool StatusTask::IncludesHidden()
-{
-    return false;
-}
-
-bool StatusTask::IncludesSubRepos()
-{
     return true;
 }
 

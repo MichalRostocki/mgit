@@ -29,16 +29,24 @@ void Task::Process(std::ostream& output_stream)
 
     do
     {
+        std::ostringstream temp_buffer;
+
         if(no_of_lines)
         {
-            output_stream << "\33[" << no_of_lines << "A";
+            temp_buffer << "\33[" << no_of_lines << "A";
         }
 
 		is_finished = ShouldExit();
-        no_of_lines = Display(output_stream);
+        if (is_finished)
+            for (const auto& task_runner : runners)
+                task_runner->Stop();
+
+        no_of_lines = Display(temp_buffer);
+
+        output_stream << temp_buffer.str();
 
         if (!is_finished)
-            std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
+            std::this_thread::sleep_for(std::chrono::milliseconds{ 100 });
 
     } while (!is_finished);
 }
@@ -55,21 +63,17 @@ void Task::TaskRunner::Stop()
 
 void Task::ClearCurrentLine(std::ostream& output_stream)
 {
-    output_stream << "\33[2K\r";
+    output_stream << Clear;
 }
 
 void Task::Register(const RepoConfig& config)
 {
-    if (IncludesHidden() || !config.hidden)
+    if (auto runner = RegisterRepo(config))
     {
-        if (auto runner = RegisterRepo(config))
-        {
-            runners.emplace_back(std::move(runner));
+        runners.emplace_back(std::move(runner));
 
-            if (IncludesSubRepos())
-                for (const auto& sub_repo : config.sub_repos)
-                    Register(sub_repo);
-        }
+        for (const auto& sub_repo : config.sub_repos)
+            Register(sub_repo);
     }
 }
 

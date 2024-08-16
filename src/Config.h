@@ -1,6 +1,14 @@
 #pragma once
 #include "json.hpp"
 
+struct BuildConfig
+{
+    std::string working_dir;
+    std::vector<std::string> require;
+    std::vector<std::string> require_pull;
+    std::vector<std::string> steps;
+};
+
 struct RepoConfig
 {
     std::string path;
@@ -8,6 +16,8 @@ struct RepoConfig
     bool hidden = false;
 
     std::vector<RepoConfig> sub_repos;
+
+    BuildConfig build;
 
     // calculated
     std::string repo_name;
@@ -22,6 +32,9 @@ struct Config
 
     bool Validate();
 };
+
+// ReSharper disable once CppInconsistentNaming
+void from_json(const nlohmann::json& j, BuildConfig& p);
 
 // ReSharper disable once CppInconsistentNaming
 void from_json(const nlohmann::json& j, RepoConfig& p);

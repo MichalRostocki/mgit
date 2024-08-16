@@ -22,6 +22,7 @@ public:
 
 	void Register(const Config& config);
 	void Process(std::ostream& output_stream);
+	virtual bool IsSuccessful() = 0;
 
 protected:
 	class TaskRunner
@@ -48,6 +49,7 @@ protected:
 	std::list<std::unique_ptr<TaskRunner>> runners;
 	std::list<std::thread> threads;
 
+	static constexpr const char* Clear = "\33[2K\r";
 	static void ClearCurrentLine(std::ostream& output_stream);
 
 
@@ -56,9 +58,6 @@ protected:
 	virtual size_t Display(std::ostream& output_stream) = 0;
 	virtual void OnAllReposRegistered() = 0;
 	virtual bool ShouldExit() = 0;
-
-	virtual bool IncludesHidden() { return false; }
-	virtual bool IncludesSubRepos() { return false; }
 
 private:
 	void Register(const RepoConfig& config);

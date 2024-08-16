@@ -40,6 +40,19 @@ bool Config::Validate()
 }
 
 // ReSharper disable once CppInconsistentNaming
+void from_json(const nlohmann::json& j, BuildConfig& p)
+{
+    if (j.contains("require"))
+        j.at("require").get_to(p.require);
+    if (j.contains("require_pull"))
+        j.at("require_pull").get_to(p.require_pull);
+    if (j.contains("steps"))
+        j.at("steps").get_to(p.steps);
+    if (j.contains("working_dir"))
+        j.at("working_dir").get_to(p.working_dir);
+}
+
+// ReSharper disable once CppInconsistentNaming
 void from_json(const nlohmann::json& j, RepoConfig& p)
 {
     j.at("path").get_to(p.path);
@@ -48,6 +61,8 @@ void from_json(const nlohmann::json& j, RepoConfig& p)
         j.at("hidden").get_to(p.hidden);
     if (j.contains("sub_repos"))
         j.at("sub_repos").get_to(p.sub_repos);
+    if (j.contains("build"))
+        j.at("build").get_to(p.build);
 }
 
 // ReSharper disable once CppInconsistentNaming

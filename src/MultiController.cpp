@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "Config.h"
+#include "Tasks/BuildTask.h"
 #include "Tasks/StatusTask.h"
 
 constexpr auto ConfigFilePathAppendix = R"(\.config\mgit\repos.json)";
@@ -45,10 +46,16 @@ bool MultiController::LoadConfig(std::ostream& error_stream)
     return config.Validate();
 }
 
-void MultiController::DisplayStatus(std::ostream& output_stream) const
+int MultiController::DisplayStatus(std::ostream& output_stream) const
 {
     StatusTask task;
-    RunTask(&task, output_stream);
+    return RunTask(&task, output_stream);
+}
+
+int MultiController::Build(std::ostream& output_stream) const
+{
+    BuildTask task;
+    return RunTask(&task, output_stream);
 }
 
 const RepoConfig* MultiController::GetRepo(const std::string_view& repo_name) const
@@ -64,11 +71,13 @@ const RepoConfig* MultiController::GetRepo(const std::string_view& repo_name) co
 	return nullptr;
 }
 
-void MultiController::RunTask(Task* task, std::ostream& output_stream) const
+int MultiController::RunTask(Task* task, std::ostream& output_stream) const
 {
     if (!task)
-        return;
+        return 1;
 
     task->Register(config);
     task->Process(output_stream);
+
+    return task->IsSuccessful() ? 0 : 1;
 }
