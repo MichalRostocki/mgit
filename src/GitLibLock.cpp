@@ -72,11 +72,11 @@ bool GitLibLock::GetFileModificationStats(const bool& interrupt, size_t& added, 
 			return true;
 
 		const auto* entry = git_status_byindex(status_list, i);
-		if (entry->status & GIT_STATUS_WT_NEW)
+		if (entry->status & (GIT_STATUS_WT_NEW | GIT_STATUS_INDEX_NEW))
 			added++;
-		if (entry->status & (GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_TYPECHANGE | GIT_STATUS_WT_RENAMED))
+		if (entry->status & (GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_TYPECHANGE | GIT_STATUS_WT_RENAMED | GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_INDEX_RENAMED | GIT_STATUS_INDEX_TYPECHANGE))
 			modified++;
-		if (entry->status & GIT_STATUS_WT_DELETED)
+		if (entry->status & (GIT_STATUS_WT_DELETED | GIT_STATUS_INDEX_DELETED))
 			deleted++;
 	}
 
