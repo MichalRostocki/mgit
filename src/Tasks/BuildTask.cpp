@@ -212,7 +212,8 @@ size_t BuildTask::Display(std::ostream& output_stream)
 	{
 		output_stream << std::endl << "Output from failed repo: " << first_failed->second.repo_config->repo_name << ": " << std::endl;
 		output_stream << first_failed->second.stage << std::endl;
-		output_stream << first_failed->second.last_app_output.rdbuf() << std::endl;
+		output_stream << first_failed->second.last_app_output.rdbuf() << std::endl << std::endl;
+		output_stream << "Output above was from failed repo " << first_failed->second.repo_config->repo_name << std::endl;
 	}
 
 	last_max_line = current_max_line;
