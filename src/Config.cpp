@@ -50,6 +50,8 @@ void from_json(const nlohmann::json& j, BuildConfig& p)
         j.at("steps").get_to(p.steps);
     if (j.contains("working_dir"))
         j.at("working_dir").get_to(p.working_dir);
+    if (j.contains("env"))
+        j.at("env").get_to(p.env);
 }
 
 // ReSharper disable once CppInconsistentNaming

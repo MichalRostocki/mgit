@@ -7,11 +7,9 @@
 #include <mutex>
 #include <Windows.h>
 
-std::mutex mutex;
-
 namespace
 {
-	void LaunchBuildStep(const std::filesystem::path& directory, const std::string& step, const bool& stop_flag, int& callback, std::string& error_log, std::stringstream& app_output)
+	void LaunchBuildStep(const std::filesystem::path& directory, const std::string& step, const std::string& env, const bool& stop_flag, int& callback, std::string& error_log, std::stringstream& app_output)
 	{
 		STARTUPINFO si = { sizeof(si) };
 		PROCESS_INFORMATION pi;
@@ -36,22 +34,19 @@ namespace
 		si.hStdOutput = hWrite;
 		si.hStdError = hWrite;  // Optional: Also redirect stderr
 
-		mutex.lock();
-		SetCurrentDirectory(directory.string().c_str());
 		if (CreateProcess(
 			NULL,                // Application name
 			const_cast<char*>(step.c_str()), // Command line
 			NULL,                // Process handle not inheritable
 			NULL,                // Thread handle not inheritable
-			TRUE,               // Set handle inheritance to FALSE
+			TRUE,                // Set handle inheritance to FALSE
 			0,                   // No creation flags
-			NULL,                // Use parent's environment block
-			NULL,                // Use parent's starting directory 
+			!env.empty() ? const_cast<char*>(env.c_str()) : NULL,
+			directory.string().c_str(),                // Use parent's starting directory 
 			&si,                 // Pointer to STARTUPINFO structure
 			&pi                  // Pointer to PROCESS_INFORMATION structure
 			)) 
 		{
-			mutex.unlock();
 			CloseHandle(hWrite);
 
 			// Wait until child process exits
@@ -108,7 +103,6 @@ namespace
 			CloseHandle(pi.hThread);
 		}
 		else {
-			mutex.unlock();
 			error_log = "Failed to create process " + step;
 		}
 	}
@@ -307,6 +301,33 @@ void BuildTask::BuildTaskRunner::Run()
 
 	TASK_RUNNER_CHECK
 
+	// Build environment
+	std::string environment;
+	if(!data->repo_config->build.env.empty())
+	{
+		std::stringstream env_stream;
+
+		auto system_env = GetEnvironmentStrings();
+
+		const char* temp_ptr = system_env;
+		std::string temp_string;
+		do
+		{
+			temp_string = temp_ptr;
+			env_stream << temp_string;
+			temp_ptr += temp_string.size() + 1;
+		} while (!temp_string.empty());
+		FreeEnvironmentStrings(system_env);
+
+		for (const auto& env : data->repo_config->build.env)
+		{
+			env_stream << ';' << env;
+		}
+		env_stream >> environment;
+	}
+
+	TASK_RUNNER_CHECK
+
 	// Builds
 	for (size_t i = 0; i < repo_config.build.steps.size(); ++i)
 	{
@@ -321,7 +342,7 @@ void BuildTask::BuildTaskRunner::Run()
 
 		int callback = 255;
 		std::string error_log;
-		std::thread step_thread{ [&working_dir, &step, &callback, &error_log, this] {LaunchBuildStep(working_dir, step, should_stop, callback, error_log, data->last_app_output); } };
+		std::thread step_thread{ [&working_dir, &step, &callback, &error_log, &environment, this] {LaunchBuildStep(working_dir, step, environment, should_stop, callback, error_log, data->last_app_output); } };
 
 		// task runner checks are conducted in separate thread now
 		while(!step_thread.joinable())

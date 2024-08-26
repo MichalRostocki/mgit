@@ -7,6 +7,7 @@ struct BuildConfig
     std::vector<std::string> require;
     std::vector<std::string> require_pull;
     std::vector<std::string> steps;
+    std::vector<std::string> env;
 };
 
 struct RepoConfig
