@@ -41,7 +41,8 @@ namespace
 			NULL,                // Thread handle not inheritable
 			TRUE,                // Set handle inheritance to FALSE
 			0,                   // No creation flags
-			!env.empty() ? const_cast<char*>(env.c_str()) : NULL,
+			// !env.empty() ? const_cast<char*>(env.c_str()) : NULL,
+			NULL,
 			directory.string().c_str(),                // Use parent's starting directory 
 			&si,                 // Pointer to STARTUPINFO structure
 			&pi                  // Pointer to PROCESS_INFORMATION structure
@@ -183,22 +184,36 @@ size_t BuildTask::Display(std::ostream& output_stream)
 	}
 
 	// build is taking long, what's going on?
-	if(first_ongoing && std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_point).count() > 5)
+	if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_point).count() > 5)
 	{
-		std::string str = first_ongoing->second.last_app_output.str();
-		const size_t len = str.length();
-		str = str.substr(len > 100 ? len - 100 : 0);
+		if (first_ongoing)
+		{
+			std::string str = first_ongoing->second.last_app_output.str();
+			const size_t len = str.length();
+			str = str.substr(len > 100 ? len - 100 : 0);
 
-		output_stream << std::endl
-			<< Clear << "Currently running: " << first_ongoing->second.repo_config->repo_name << std::endl
-			<< Clear << " - Stage: " << first_ongoing->second.stage << std::endl
-			<< Clear << " -  Progress: " << std::endl
-			<< Clear << "   " << str << std::endl
-			<< Clear << std::endl
-			<< Clear << std::endl
-			<< Clear << std::endl;
+			output_stream << std::endl
+				<< Clear << "Currently running: " << first_ongoing->second.repo_config->repo_name << std::endl
+				<< Clear << " - Stage: " << first_ongoing->second.stage << std::endl
+				<< Clear << " -  Progress: " << std::endl
+				<< Clear << "   " << str << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl;
 
-		lines_written += std::ranges::count(str, '\n') + 8;
+			lines_written += std::ranges::count(str, '\n') + 8;
+		}
+		else
+		{
+			output_stream << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl
+				<< Clear << std::endl;
+		}
 	}
 
 	// Show failed build
@@ -332,7 +347,7 @@ void BuildTask::BuildTaskRunner::Run()
 	for (size_t i = 0; i < repo_config.build.steps.size(); ++i)
 	{
 		const auto& step = repo_config.build.steps[i];
-		data->last_app_output.clear();
+		data->last_app_output = std::stringstream{};
 
 		std::stringstream str;
 		str << "Building (" << i << " / " << repo_config.build.steps.size() << ") - " << step;
