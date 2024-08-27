@@ -1,5 +1,5 @@
 #pragma once
-#include <string_view>
+#include <string>
 
 // Git2 references
 // ReSharper disable CppInconsistentNaming
