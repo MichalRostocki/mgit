@@ -1,112 +1,73 @@
 #include "Task.h"
 
-#include <ostream>
+#include "Config.h"
+#include "Nodes/SimpleTaskControllerNode.h"
 
-#include "../Config.h"
+Task::Task(const RepoConfig& repo_config): repo_config(repo_config)
+{
+}
+
+// ReSharper disable once CppMemberFunctionMayBeConst
+void Task::Launch()
+{
+	if(!running_thread.joinable())
+		running_thread = std::thread{ [this] {this->InternalRun(); } };
+}
 
 Task::~Task()
 {
-    StopProcedure();
+	should_stop = true;
+	if (running_thread.joinable())
+		running_thread.join();
 }
 
-void Task::Register(const Config& config)
+void Task::NotifyOnEnd(const std::shared_ptr<ControllerNode>& node)
 {
-	for (const auto& repo_config : config.repositories)
-        Register(repo_config);
+	attached_nodes.push_back(node);
 }
 
-void Task::Process(std::ostream& output_stream)
+void Task::NotifyOnError(const std::shared_ptr<ControllerNode>& node)
 {
-    OnAllReposRegistered();
-
-	for (const auto& runner : runners)
-		threads.emplace_back([&runner] { runner->Run(); });
-
-	std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
-
-    bool is_finished;
-    size_t no_of_lines = 0;
-
-    do
-    {
-        std::ostringstream temp_buffer;
-
-        if(no_of_lines)
-        {
-            temp_buffer << "\33[" << no_of_lines << "A";
-        }
-
-		is_finished = ShouldExit();
-        if (is_finished)
-            for (const auto& task_runner : runners)
-                task_runner->Stop();
-
-        no_of_lines = Display(temp_buffer);
-
-        output_stream << temp_buffer.str();
-
-        if (!is_finished)
-            std::this_thread::sleep_for(std::chrono::milliseconds{ 100 });
-
-    } while (!is_finished);
+	error_nodes.push_back(node);
 }
 
-Task::TaskRunner::TaskRunner(const RepoConfig& repo_config) :
-    repo_config(repo_config)
+void Task::ForceStop()
 {
+	should_stop = true;
 }
 
-void Task::TaskRunner::Stop()
+std::shared_ptr<ControllerNode> Task::GetSimpleNotifier()
 {
-    should_stop = true;
+	return std::make_shared<SimpleTaskControllerNode>(this);
 }
 
-void Task::ClearCurrentLine(std::ostream& output_stream)
+void Task::InternalRun()
 {
-    output_stream << Clear;
+	try
+	{
+		Run();
+	}
+	catch(...)
+	{
+		error_encountered = true;
+	}
+
+	if (!should_stop)
+	{
+		if (error_encountered)
+			NotifyNodes(error_nodes);
+		else NotifyNodes(attached_nodes);
+	}
+
+	attached_nodes.clear();
+	error_nodes.clear();
+	is_complete = true;
 }
 
-void Task::Register(const RepoConfig& config)
+void Task::NotifyNodes(const std::list<std::shared_ptr<ControllerNode>>& nodes)
 {
-    if (auto runner = RegisterRepo(config))
-    {
-        runners.emplace_back(std::move(runner));
-
-        for (const auto& sub_repo : config.sub_repos)
-            Register(sub_repo);
-    }
-}
-
-void Task::StopProcedure()
-{
-	for (const auto& task_runner : runners)
-        task_runner->Stop();
-
-    // Wait for everyone to get finished
-
-    constexpr auto max_step = 100;
-    auto step = 0;
-    bool all_joined;
-
-    do
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds{ 2 * step });
-        all_joined = true;
-
-        for (const auto& thread : threads)
-            if (!thread.joinable())
-            {
-                all_joined = false;
-                break;
-            }
-
-        step++;
-
-    } while (!all_joined && max_step != step);
-
-	for (auto & thread : threads)
-        thread.join();
-
-    threads.clear();
-    runners.clear();
+	for (const auto & controller_node : nodes)
+	{
+		controller_node->Notify(repo_config.repo_name);
+	}
 }

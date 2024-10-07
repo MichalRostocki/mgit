@@ -21,7 +21,7 @@ int DisplayStatus()
         return 1;
     }
 
-    return ctr.DisplayStatus(std::cout);
+    return ctr.DisplayStatus();
 }
 
 int TryRunGitCli(const RepoConfig* repo_config, const std::vector<std::string>& args)
@@ -69,7 +69,7 @@ int BuildRepos()
         return 1;
     }
 
-    return ctr.Build(std::cout);
+    return ctr.Build();
 }
 
 int HandleCommand(const std::string_view& command, const std::vector<std::string>& args)

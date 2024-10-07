@@ -1,52 +1,15 @@
 #pragma once
-
 #include "Task.h"
+
+struct StatusData;
 
 class StatusTask final : public Task
 {
 public:
-	bool IsSuccessful() override;
-
-protected:
-	std::unique_ptr<TaskRunner> RegisterRepo(const RepoConfig& repository) override;
-	void OnAllReposRegistered() override;
-	size_t Display(std::ostream& output_stream) override;
-	bool ShouldExit() override;
+	explicit StatusTask(const RepoConfig& config, StatusData& data);
 
 private:
-	struct StatusRepoData
-	{
-		const RepoConfig* repo_config = nullptr;
+	StatusData& data;
 
-		bool is_complete = false;
-		bool error_encountered = false;
-
-		bool is_repo_found = true;
-		bool is_repo_detached = false;
-
-		bool no_of_files_started = false;
-		bool no_of_files_complete = false;
-
-		std::string current_branch;
-
-		size_t files_added = 0;
-		size_t files_modified = 0;
-		size_t files_deleted = 0;
-	};
-
-	class StatusTaskRunner final : public TaskRunner
-	{
-	public:
-		StatusTaskRunner(const RepoConfig& repo, StatusRepoData* data);
-
-		void Run() override;
-
-	private:
-		StatusRepoData* data = nullptr;
-
-		void GitError();
-	};
-
-	std::list<StatusRepoData> repositories_data;
-	size_t max_name_space = 0;
+	void Run() override;
 };
