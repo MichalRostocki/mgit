@@ -42,7 +42,7 @@ namespace
 			0,                   // No creation flags
 			// !env.empty() ? const_cast<char*>(env.c_str()) : NULL,
 			NULL,
-			directory.string().c_str(),                // Use parent's starting directory 
+			directory.string().c_str(),
 			&si,                 // Pointer to STARTUPINFO structure
 			&pi                  // Pointer to PROCESS_INFORMATION structure
 		))

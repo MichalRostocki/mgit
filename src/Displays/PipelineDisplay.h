@@ -9,11 +9,11 @@ struct RepoCommandData;
 class PipelineDisplay final : public Display
 {
 public:
-	explicit PipelineDisplay(const std::map<std::string, std::unique_ptr<RepoCommandData>>& data);
+	explicit PipelineDisplay(const std::map<std::string, std::shared_ptr<RepoCommandData>>& data);
 	size_t Print(std::ostream& output, bool will_exit) override;
 
 private:
-	const std::map<std::string, std::unique_ptr<RepoCommandData>>& data_collection;
+	const std::map<std::string, std::shared_ptr<RepoCommandData>>& data_collection;
 
 	size_t max_name_space = 0;
 	size_t last_max_line = 0;

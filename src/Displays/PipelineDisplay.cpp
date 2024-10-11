@@ -1,11 +1,9 @@
 #include "PipelineDisplay.h"
 
-#include <optional>
-
 #include "Config.h"
 #include "Data/CommandData.h"
 
-PipelineDisplay::PipelineDisplay(const std::map<std::string, std::unique_ptr<RepoCommandData>>& data) :
+PipelineDisplay::PipelineDisplay(const std::map<std::string, std::shared_ptr<RepoCommandData>>& data) :
 	data_collection(data)
 {
 	for (const auto& d : data)
@@ -19,8 +17,8 @@ size_t PipelineDisplay::Print(std::ostream& output, bool will_exit)
 	size_t lines_written = 0;
 	size_t current_max_line = 0;
 
-	const std::pair<const std::string, std::unique_ptr<RepoCommandData>>* first_failed = nullptr;
-	const std::pair<const std::string, std::unique_ptr<RepoCommandData>>* first_ongoing = nullptr;
+	const std::pair<const std::string, std::shared_ptr<RepoCommandData>>* first_failed = nullptr;
+	const std::pair<const std::string, std::shared_ptr<RepoCommandData>>* first_ongoing = nullptr;
 
 	// iterate builds
 	for (const auto& d : data_collection)
@@ -43,7 +41,7 @@ size_t PipelineDisplay::Print(std::ostream& output, bool will_exit)
 
 		std::stringstream stage_stream;
 		if (active)
-			stage_stream << "Building (" << active->id << " / " << repo_data->repo_config.build.steps.size() << ") - " << active->command;
+			stage_stream << "Building (" << active->id << " / " << repo_data->steps_data.size() << ") - " << active->command;
 		else if (repo_data->await_list.empty())
 			stage_stream << "Completed!";
 		else

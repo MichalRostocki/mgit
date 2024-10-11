@@ -41,6 +41,13 @@ std::shared_ptr<ControllerNode> Task::GetSimpleNotifier()
 	return std::make_shared<SimpleTaskControllerNode>(this);
 }
 
+void Task::InvokeSuccess()
+{
+	NotifyNodes(attached_nodes);
+	attached_nodes.clear();
+	error_nodes.clear();
+}
+
 void Task::InternalRun()
 {
 	try
@@ -64,6 +71,7 @@ void Task::InternalRun()
 	is_complete = true;
 }
 
+// ReSharper disable once CppMemberFunctionMayBeConst
 void Task::NotifyNodes(const std::list<std::shared_ptr<ControllerNode>>& nodes)
 {
 	for (const auto & controller_node : nodes)

@@ -1,6 +1,12 @@
 #pragma once
 #include "json.hpp"
 
+struct ErrorHandling
+{
+    bool retry = false;
+    std::vector<std::string> before_retry;
+};
+
 struct BuildConfig
 {
     std::string working_dir;
@@ -8,6 +14,7 @@ struct BuildConfig
     std::vector<std::string> require_pull;
     std::vector<std::string> steps;
     std::vector<std::string> env;
+    ErrorHandling on_error;
 };
 
 struct RepoConfig
@@ -33,6 +40,9 @@ struct Config
 
     bool Validate();
 };
+
+// ReSharper disable once CppInconsistentNaming
+void from_json(const nlohmann::json& j, ErrorHandling& p);
 
 // ReSharper disable once CppInconsistentNaming
 void from_json(const nlohmann::json& j, BuildConfig& p);

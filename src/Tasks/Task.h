@@ -19,6 +19,7 @@ public:
 	void ForceStop();
 
 	std::shared_ptr<ControllerNode> GetSimpleNotifier();
+	void InvokeSuccess();
 
 	Task(const Task& other) = delete;
 	Task(Task&& other) noexcept = delete;

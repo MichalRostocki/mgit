@@ -40,6 +40,15 @@ bool Config::Validate()
 }
 
 // ReSharper disable once CppInconsistentNaming
+void from_json(const nlohmann::json& j, ErrorHandling& p)
+{
+    if (j.contains("retry"))
+        j.at("retry").get_to(p.retry);
+    if (j.contains("before_retry"))
+        j.at("before_retry").get_to(p.before_retry);
+}
+
+// ReSharper disable once CppInconsistentNaming
 void from_json(const nlohmann::json& j, BuildConfig& p)
 {
     if (j.contains("require"))
@@ -52,6 +61,8 @@ void from_json(const nlohmann::json& j, BuildConfig& p)
         j.at("working_dir").get_to(p.working_dir);
     if (j.contains("env"))
         j.at("env").get_to(p.env);
+    if (j.contains("on_error"))
+        j.at("on_error").get_to(p.on_error);
 }
 
 // ReSharper disable once CppInconsistentNaming

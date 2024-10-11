@@ -33,6 +33,95 @@ namespace OutputControl
 	}
 }
 
+namespace
+{
+	void AddCommandTasks(const RepoConfig& repo_config, const std::vector<std::string>& steps, const std::shared_ptr<RepoTaskCollection>& output_tasks, const std::shared_ptr<RepoCommandData>& repo_data)
+	{
+		if (!steps.empty())
+		{
+			std::string environment;
+			for (const auto& step : steps)
+			{
+				auto current_data = std::make_unique<CommandData>(output_tasks->tasks.size(), step, environment);
+				auto task = std::make_unique<CommandTask>(repo_config, *current_data);
+
+				repo_data->steps_data.push_back(std::move(current_data));
+				output_tasks->tasks.push_back(std::move(task));
+			}
+		}
+	}
+
+	void ConnectTasks(const std::shared_ptr<RepoTaskCollection>& repo_tasks, const size_t start_index, const size_t end_index)
+	{
+		const auto task_finished_notifier = repo_tasks->GetFinishNotifier();
+		for (size_t i = start_index; i < end_index; ++i)
+		{
+			const auto& task = repo_tasks->tasks[i];
+
+			// Notify RepoData that task is complete on end
+			task->NotifyOnEnd(task_finished_notifier);
+
+			// Attach to previous task in given repository
+			if (i != start_index)
+				repo_tasks->tasks[i - 1]->NotifyOnEnd(task->GetSimpleNotifier());
+		}
+	}
+
+	void ConnectTasks(const std::shared_ptr<RepoTaskCollection>& repo_tasks)
+	{
+		ConnectTasks(repo_tasks, 0, repo_tasks->tasks.size());
+	}
+
+	void ApplyErrorHandling(const RepoConfig& repo_config, const std::shared_ptr<RepoTaskCollection>& repo_tasks, const std::shared_ptr<RepoCommandData>& repo_data)
+	{
+		const auto basic_tasks_count = repo_config.build.steps.size();
+		const auto before_retry_tasks_count = repo_config.build.on_error.before_retry.size();
+		const auto all_tasks_count = basic_tasks_count + (repo_config.build.on_error.retry ? basic_tasks_count + before_retry_tasks_count : 0);
+
+		const auto fatal_error_handler = repo_tasks->GetErrorNotifier();
+
+		if (repo_config.build.on_error.retry)
+		{
+			if (!repo_config.build.on_error.before_retry.empty())
+			{
+				AddCommandTasks(repo_config, repo_config.build.on_error.before_retry, repo_tasks, repo_data);
+			}
+
+			AddCommandTasks(repo_config, repo_config.build.steps, repo_tasks, repo_data);
+			ConnectTasks(repo_tasks, basic_tasks_count, all_tasks_count);
+
+			auto* retry_task = repo_tasks->tasks[basic_tasks_count].get();
+			const auto soft_error_handler = std::make_shared<SimpleControllerNode>(
+			[basic_tasks_count, repo_data, repo_tasks, retry_task](const std::string&)
+			{
+				repo_data->SkipToTask(basic_tasks_count);
+				repo_tasks->current_task_index = basic_tasks_count;
+				retry_task->Launch();
+			});
+
+			for (size_t i = 0; i < basic_tasks_count; ++i)
+				repo_tasks->tasks[i]->NotifyOnError(soft_error_handler);
+
+			for (size_t i = basic_tasks_count; i < repo_tasks->tasks.size(); ++i)
+				repo_tasks->tasks[i]->NotifyOnError(fatal_error_handler);
+
+			auto* last_task = repo_tasks->tasks.back().get();
+			const auto non_error_finisher = std::make_shared<SimpleControllerNode>([last_task, repo_data, repo_tasks](const std::string&)
+			{
+				last_task->InvokeSuccess();
+				repo_data->SkipToTask(repo_data->steps_data.size());
+				repo_tasks->current_task_index = repo_data->steps_data.size();
+			});
+			repo_tasks->tasks[basic_tasks_count - 1]->NotifyOnEnd(non_error_finisher);
+		}
+		else
+		{
+			for (const auto& task : repo_tasks->tasks)
+				task->NotifyOnError(fatal_error_handler);
+		}
+	}
+}
+
 bool MultiController::LoadConfig(std::ostream& error_stream)
 {
 	// ReSharper disable once StringLiteralTypo
@@ -96,36 +185,29 @@ int MultiController::DisplayStatus()
 
 int MultiController::Build()
 {
-	std::map<std::string, std::unique_ptr<RepoCommandData>> data;
+	std::map<std::string, std::shared_ptr<RepoCommandData>> data;
 
 	// Build tasks
 	for (const auto& repo_config : config.repositories)
 	{
 		if (!repo_config.build.steps.empty())
 		{
-			auto& repo_tasks = *tasks.emplace(repo_config.repo_name, std::make_unique<RepoTaskCollection>()).first->second;
-			auto repo_data = std::make_unique<RepoCommandData>(repo_config);
+			const size_t expected_tasks = repo_config.build.steps.size()
+				+ (repo_config.build.on_error.retry ? repo_config.build.steps.size() + repo_config.build.on_error.before_retry.size() : 0);
 
+			auto repo_tasks = std::make_shared<RepoTaskCollection>();
+			repo_tasks->tasks.reserve(expected_tasks);
+
+			auto repo_data = std::make_shared<RepoCommandData>(repo_config);
 			repo_data->await_list.insert(repo_config.build.require.begin(), repo_config.build.require.end());
+			repo_data->steps_data.reserve(expected_tasks);
 
-			std::string environment;
+			AddCommandTasks(repo_config, repo_config.build.steps, repo_tasks, repo_data);
+			ConnectTasks(repo_tasks);
+			ApplyErrorHandling(repo_config, repo_tasks, repo_data);
 
-			for (size_t i = 0; i < repo_config.build.steps.size(); ++i)
-			{
-				const auto& step = repo_config.build.steps[i];
-				auto current_data = std::make_unique<CommandData>(i, step, environment);
-				auto task = std::make_unique<CommandTask>(repo_config, *current_data);
-
-				task->NotifyOnEnd(repo_tasks.GetFinishNotifier());
-				task->NotifyOnError(repo_tasks.GetErrorNotifier());
-				if (!repo_tasks.tasks.empty())
-					repo_tasks.tasks.back()->NotifyOnEnd(task->GetSimpleNotifier());
-
-				repo_data->steps_data.push_back(std::move(current_data));
-				repo_tasks.tasks.push_back(std::move(task));
-			}
-
-			data.emplace(repo_config.repo_name, std::move(repo_data));
+			tasks[repo_config.repo_name] = std::move(repo_tasks);
+			data[repo_config.repo_name] = std::move(repo_data);
 		}
 	}
 
@@ -137,7 +219,6 @@ int MultiController::Build()
 		if (!repo_config.build.steps.empty())
 		{
 			auto& repo_data = data[repo_config.repo_name];
-			auto data_node = std::make_shared<SimpleControllerNode>([&repo_data](const std::string& s) { repo_data->await_list.erase(s); });
 
 			std::list<Task*> required_tasks;
 			for (const auto& requirement : repo_config.build.require)
@@ -155,8 +236,15 @@ int MultiController::Build()
 			else
 			{
 				auto node = std::make_shared<CountedTaskControllerNode>(first_task, required_tasks.size());
+				auto data_node = std::make_shared<SimpleControllerNode>([&repo_data](const std::string& s)
+				{
+					repo_data->await_list.erase(s);
+				});
 				for (auto* required_task : required_tasks)
+				{
 					required_task->NotifyOnEnd(node);
+					required_task->NotifyOnEnd(data_node);
+				}
 			}
 		}
 	}
@@ -242,7 +330,7 @@ int MultiController::RunTask(const std::list<Task*>& default_tasks, Display& dis
 	return HasError() ? 1 : 0;
 }
 
-std::shared_ptr<ControllerNode> MultiController::RepoTaskCollection::GetFinishNotifier()
+std::shared_ptr<ControllerNode> RepoTaskCollection::GetFinishNotifier()
 {
 	return std::make_shared<SimpleControllerNode>([this](const std::string& _)
 	{
@@ -250,7 +338,7 @@ std::shared_ptr<ControllerNode> MultiController::RepoTaskCollection::GetFinishNo
 	});
 }
 
-std::shared_ptr<ControllerNode> MultiController::RepoTaskCollection::GetErrorNotifier()
+std::shared_ptr<ControllerNode> RepoTaskCollection::GetErrorNotifier()
 {
 	return std::make_shared<SimpleControllerNode>([this](const std::string& _)
 	{
@@ -258,13 +346,13 @@ std::shared_ptr<ControllerNode> MultiController::RepoTaskCollection::GetErrorNot
 	});
 }
 
-bool MultiController::RepoTaskCollection::IsComplete() const
+bool RepoTaskCollection::IsComplete() const
 {
 	return current_task_index >= tasks.size();
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
-void MultiController::RepoTaskCollection::Stop()
+void RepoTaskCollection::Stop()
 {
 	for (const auto& task : tasks)
 		task->ForceStop();
