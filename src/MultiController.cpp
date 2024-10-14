@@ -5,6 +5,7 @@
 
 #include "Config.h"
 #include "Data/CommandData.h"
+#include "Data/Data.h"
 #include "Data/StatusData.h"
 #include "Displays/PipelineDisplay.h"
 #include "Displays/StatusDisplay.h"

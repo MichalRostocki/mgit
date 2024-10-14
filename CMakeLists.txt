@@ -11,6 +11,7 @@ set(HEADERS
     src/MultiController.h
 
     src/Data/CommandData.h
+    src/Data/Data.h
     src/Data/StatusData.h
 
     src/Displays/Display.h
@@ -32,6 +33,8 @@ set(SOURCES
     src/GitLibLock.cpp
     src/main.cpp
     src/MultiController.cpp
+
+    src/Data/Data.cpp
 
     src/Displays/Display.cpp
     src/Displays/PipelineDisplay.cpp

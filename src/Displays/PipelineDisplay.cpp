@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "Data/CommandData.h"
+#include "Data/Data.h"
 
 PipelineDisplay::PipelineDisplay(const std::map<std::string, std::shared_ptr<RepoCommandData>>& data) :
 	data_collection(data)
