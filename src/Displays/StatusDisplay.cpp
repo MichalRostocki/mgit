@@ -1,68 +1,72 @@
 #include "StatusDisplay.h"
 
-#include "Data/StatusData.h"
+#include "Config.h"
+#include "RepoOrchestrator.h"
+#include "OrderedMap.h"
 
-StatusDisplay::StatusDisplay(const std::list<StatusData>& data) : data_collection(data), max_name_space(0)
+StatusDisplay::StatusDisplay(const MultiControllerTasks& data) : data_collection(data), max_name_space(0)
 {
     for (const auto& status_data : data_collection)
-        max_name_space = std::max(status_data.repo_name.size(), max_name_space);
+        max_name_space = std::max(status_data.second->GetConfig().repo_name.size(), max_name_space);
     max_name_space += 4;
 }
 
 size_t StatusDisplay::Print(std::ostream& output, bool will_exit)
 {
-    const auto data_copy = data_collection;
-
     size_t max_size_of_branch_names = 11;
-    for (const auto& data : data_copy)
+    for (const auto& data : data_collection)
     {
-        if (!data.current_branch.empty())
+        const auto& repo_info = data.second->GetRepositoryInfo();
+        if (!repo_info.current_branch.empty())
         {
-            size_t size_of_branch_name = data.current_branch.size() + 8;
-            if (data.is_repo_detached)
+            size_t size_of_branch_name = repo_info.current_branch.size() + 8;
+            if (repo_info.is_repo_detached)
                 size_of_branch_name += 11;
-            size_of_branch_name += 2ull * data.sub_repo_level;
+            size_of_branch_name += 2ull * repo_info.sub_repo_level;
 
             max_size_of_branch_names = std::max(max_size_of_branch_names, size_of_branch_name);
         }
     }
     max_size_of_branch_names += 4;
 
-    for (const auto& data : data_copy)
+    for (const auto& data : data_collection)
     {
-        for (size_t i = 0; i < data.sub_repo_level * 2; ++i)
+        const auto& repo_info = data.second->GetRepositoryInfo();
+        const auto& repo_config = data.second->GetConfig();
+
+        for (size_t i = 0; i < repo_info.sub_repo_level * 2; ++i)
             output << ' ';
 
-        output << ' ' << data.repo_name;
+        output << ' ' << repo_config.repo_name;
 
-        const auto spaces_needed = max_name_space - (data.repo_name.size() + 2ull * data.sub_repo_level);
+        const auto spaces_needed = max_name_space - (repo_config.repo_name.size() + 2ull * repo_info.sub_repo_level);
         for (size_t i = 0; i < spaces_needed; ++i)
             output << ' ';
 
-        if (data.is_repo_found)
+        if (repo_info.is_repo_found)
         {
             output << "branch:";
 
-            if (data.current_branch.empty())
+            if (repo_info.current_branch.empty())
             {
                 output << "...";
             }
             else
             {
-                if (data.current_branch == data.default_branch)
+                if (repo_info.current_branch == repo_config.default_branch)
                     output << ' ';
                 else output << '*';
 
-                auto repo_branch_size = data.current_branch.size() + 8;
-                output << data.current_branch;
+                auto repo_branch_size = repo_info.current_branch.size() + 8;
+                output << repo_info.current_branch;
 
-                if (data.is_repo_detached)
+                if (repo_info.is_repo_detached)
                 {
                     output << " (DETACHED)";
                     repo_branch_size += 11;
                 }
 
-                if (data.no_of_files_complete)
+                if (repo_info.no_of_files_complete)
                 {
                     auto missing_spaces = max_size_of_branch_names - repo_branch_size;
                     while (missing_spaces--)
@@ -70,9 +74,9 @@ size_t StatusDisplay::Print(std::ostream& output, bool will_exit)
                         output << ' ';
                     }
 
-                    output << "A: " << data.files_added
-                        << " M: " << data.files_modified
-                        << " D: " << data.files_deleted;
+                    output << "A: " << repo_info.files_added
+                        << " M: " << repo_info.files_modified
+                        << " D: " << repo_info.files_deleted;
                 }
             }
         }
@@ -84,5 +88,5 @@ size_t StatusDisplay::Print(std::ostream& output, bool will_exit)
         output << std::endl;
     }
 
-    return data_copy.size();
+    return data_collection.size();
 }

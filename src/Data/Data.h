@@ -1,37 +1,35 @@
 #pragma once
 #include <atomic>
 #include <memory>
-#include <set>
+#include <sstream>
 #include <string>
-#include <vector>
 
-struct CommandData;
-class ControllerNode;
 class Task;
-struct RepoConfig;
 
-struct RepoCommandData
+struct RepositoryInformation
 {
-	const RepoConfig& repo_config;
-	std::set<std::string> await_list;
-	std::vector<std::unique_ptr<CommandData>> steps_data;
+	std::string current_branch;
 
-	explicit RepoCommandData(const RepoConfig& repo_config);
+	size_t sub_repo_level;
+	size_t files_added = 0;
+	size_t files_modified = 0;
+	size_t files_deleted = 0;
 
-	const CommandData* GetActiveOrLast() const;
-	const CommandData* GetActive() const;
+	std::atomic<bool> is_repo_found{ true };
+	std::atomic<bool> is_repo_detached{ false };
+	std::atomic<bool> no_of_files_complete{ false };
 
-	void SkipToTask(size_t size);
+	explicit RepositoryInformation(size_t sub_repo_level);
 };
 
-struct RepoTaskCollection
+struct StepData
 {
-	std::vector<std::unique_ptr<Task>> tasks;
-	std::atomic<size_t> current_task_index{ 0 };
-	std::atomic<bool> error_encountered{ false };
+	const size_t id;
+	std::unique_ptr<Task> task;
 
-	std::shared_ptr<ControllerNode> GetFinishNotifier();
-	std::shared_ptr<ControllerNode> GetErrorNotifier();
-	bool IsComplete() const;
-	void Stop();
+	std::atomic<bool> initialized{ false };
+	std::atomic<bool> completed{ false };
+
+	std::string error;
+	std::stringstream output;
 };

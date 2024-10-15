@@ -9,19 +9,14 @@ set(HEADERS
     src/GitLibLock.h
     src/json.hpp
     src/MultiController.h
+    src/OrderedMap.h
+    src/RepoOrchestrator.h
 
-    src/Data/CommandData.h
     src/Data/Data.h
-    src/Data/StatusData.h
 
     src/Displays/Display.h
     src/Displays/PipelineDisplay.h
     src/Displays/StatusDisplay.h
-
-    src/Nodes/ControllerNode.h
-    src/Nodes/SimpleControllerNode.h
-    src/Nodes/SimpleTaskControllerNode.h
-    src/Nodes/CountedTaskControllerNode.h
 
     src/Tasks/CommandTask.h
     src/Tasks/StatusTask.h
@@ -33,16 +28,13 @@ set(SOURCES
     src/GitLibLock.cpp
     src/main.cpp
     src/MultiController.cpp
+    src/RepoOrchestrator.cpp
 
     src/Data/Data.cpp
 
     src/Displays/Display.cpp
     src/Displays/PipelineDisplay.cpp
     src/Displays/StatusDisplay.cpp
-
-    src/Nodes/SimpleControllerNode.cpp
-    src/Nodes/SimpleTaskControllerNode.cpp
-    src/Nodes/CountedTaskControllerNode.cpp
 
     src/Tasks/CommandTask.cpp
     src/Tasks/StatusTask.cpp

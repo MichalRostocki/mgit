@@ -1,6 +1,11 @@
 #pragma once
 #include <ostream>
 
+template<typename Key, typename Value>
+class OrderedMap;
+class RepoOrchestrator;
+using MultiControllerTasks = OrderedMap<std::string, std::shared_ptr<RepoOrchestrator>>;
+
 class Display
 {
 public:

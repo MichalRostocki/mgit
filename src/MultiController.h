@@ -1,9 +1,12 @@
 #pragma once
 #include "Config.h"
 #include "Tasks/Task.h"
+#include "OrderedMap.h"
 
 class Display;
-struct RepoTaskCollection;
+class RepoOrchestrator;
+
+using MultiControllerTasks = OrderedMap<std::string, std::shared_ptr<RepoOrchestrator>>;
 
 class MultiController
 {
@@ -17,9 +20,9 @@ public:
 
 private:
     Config config;
-    std::map<std::string, std::shared_ptr<RepoTaskCollection>> tasks;
+    MultiControllerTasks tasks;
 
     bool ShouldExit() const;
     bool HasError() const;
-    int RunTask(const std::list<Task*>& default_tasks, Display& display);
+    int RunTask(Display& display);
 };

@@ -4,25 +4,29 @@
 #include <Windows.h>
 
 #include "Config.h"
-#include "Data/CommandData.h"
+#include "RepoOrchestrator.h"
 
 namespace
 {
-	void LaunchWindowsApp(int& callback, std::stringstream& app_output, std::string& error_log, const std::string& command, const std::filesystem::path& directory, const std::atomic<bool>& stop_flag)
+	void LaunchWindowsApp(int& callback, std::stringstream& app_output, std::string& error_log,
+	                      const std::string& command, const std::filesystem::path& directory,
+	                      const std::atomic<bool>& stop_flag)
 	{
-		STARTUPINFO si = { sizeof(si) };
+		STARTUPINFO si = {sizeof(si)};
 		PROCESS_INFORMATION pi;
-		SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
-		HANDLE hRead, hWrite;
+		SECURITY_ATTRIBUTES sa = {sizeof(sa), nullptr, TRUE};
+		HANDLE h_read, h_write;
 
-		if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+		if (!CreatePipe(&h_read, &h_write, &sa, 0))
+		{
 			std::stringstream str;
 			str << "Failed to create pipe: " << GetLastError() << std::endl;
 			error_log = str.str();
 			return;
 		}
 
-		if (!SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0)) {
+		if (!SetHandleInformation(h_read, HANDLE_FLAG_INHERIT, 0))
+		{
 			std::stringstream str;
 			str << "Failed to set handle information: " << GetLastError() << std::endl;
 			error_log = str.str();
@@ -30,24 +34,23 @@ namespace
 		}
 
 		si.dwFlags |= STARTF_USESTDHANDLES;
-		si.hStdOutput = hWrite;
-		si.hStdError = hWrite;  // Optional: Also redirect stderr
+		si.hStdOutput = h_write;
+		si.hStdError = h_write;
 
 		if (CreateProcess(
-			NULL,                // Application name
-			const_cast<char*>(command.c_str()), // Command line
-			NULL,                // Process handle not inheritable
-			NULL,                // Thread handle not inheritable
-			TRUE,                // Set handle inheritance to FALSE
-			0,                   // No creation flags
-			// !env.empty() ? const_cast<char*>(env.c_str()) : NULL,
-			NULL,
+			nullptr,
+			const_cast<char*>(command.c_str()),
+			nullptr,
+			nullptr,
+			TRUE,
+			0,
+			nullptr,
 			directory.string().c_str(),
-			&si,                 // Pointer to STARTUPINFO structure
-			&pi                  // Pointer to PROCESS_INFORMATION structure
+			&si,
+			&pi
 		))
 		{
-			CloseHandle(hWrite);
+			CloseHandle(h_write);
 
 			// Wait until child process exits
 			DWORD status;
@@ -58,7 +61,7 @@ namespace
 					TerminateProcess(pi.hProcess, 1);
 					CloseHandle(pi.hProcess);
 					CloseHandle(pi.hThread);
-					CloseHandle(hRead);
+					CloseHandle(h_read);
 					return;
 				}
 
@@ -66,12 +69,15 @@ namespace
 
 				char buffer[4096];
 				DWORD bytes_read;
-				while (ReadFile(hRead, buffer, sizeof(buffer) - 1, &bytes_read, nullptr)) {
-					if (bytes_read > 0) {
+				while (ReadFile(h_read, buffer, sizeof(buffer) - 1, &bytes_read, nullptr))
+				{
+					if (bytes_read > 0)
+					{
 						buffer[bytes_read] = '\0';
 						app_output << buffer;
 					}
-					else {
+					else
+					{
 						break;
 					}
 
@@ -80,70 +86,77 @@ namespace
 						TerminateProcess(pi.hProcess, 1);
 						CloseHandle(pi.hProcess);
 						CloseHandle(pi.hThread);
-						CloseHandle(hRead);
+						CloseHandle(h_read);
 						return;
 					}
 				}
-
-			} while (status == WAIT_TIMEOUT);
+			}
+			while (status == WAIT_TIMEOUT);
 
 			DWORD exit_code;
-			if (GetExitCodeProcess(pi.hProcess, &exit_code)) {
+			if (GetExitCodeProcess(pi.hProcess, &exit_code))
+			{
 				callback = static_cast<int>(exit_code);
 			}
-			else {
+			else
+			{
 				std::stringstream str;
 				str << "Failed to get exit code: " << GetLastError();
 				error_log = str.str();
 			}
 
 			// Close process and thread handles
-			CloseHandle(hRead);
+			CloseHandle(h_read);
 			CloseHandle(pi.hProcess);
 			CloseHandle(pi.hThread);
 		}
-		else {
+		else
+		{
 			error_log = "Failed to create process " + command;
 		}
 	}
 }
 
-CommandTask::CommandTask(const RepoConfig& config, CommandData& data) :
-	Task(config),
-	data(data)
+CommandTask::CommandTask(RepoOrchestrator* repo_orchestrator, StepData& step, std::string command) :
+	Task(repo_orchestrator, step),
+	command(std::move(command))
 {
 }
 
-void CommandTask::Run()
+bool CommandTask::Run()
 {
-	data.initialized = true;
+	const auto& config = parent->GetConfig();
 
-	std::filesystem::path working_dir = repo_config.path;
-	working_dir.append(repo_config.build.working_dir);
+	std::filesystem::path working_dir = config.path;
+	working_dir.append(config.build.working_dir);
 	if (!exists(working_dir))
 	{
-		data.error = "Could not find directory " + working_dir.string();
-		error_encountered = true;
-		return;
+		step_data.error = "Could not find directory " + working_dir.string();
+		return false;
 	}
 
 	TASK_RUNNER_CHECK;
 
 	int callback = 255;
 	std::string error_log;
-	LaunchWindowsApp(callback, data.app_output, error_log, data.command, working_dir, should_stop);
+	LaunchWindowsApp(callback, step_data.output, error_log, command, working_dir, should_stop);
 
 	TASK_RUNNER_CHECK;
 
 	if (callback != 0)
 	{
 		if (!error_log.empty())
-			data.error = std::move(error_log);
+			step_data.error = std::move(error_log);
 		else
-			data.error = "Command failed";
+			step_data.error = "Command failed";
 
-		error_encountered = true;
+		return false;
 	}
 
-	data.completed = true;
+	return true;
+}
+
+std::string_view CommandTask::GetCommand()
+{
+	return command;
 }

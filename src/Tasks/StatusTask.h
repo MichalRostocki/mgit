@@ -6,10 +6,8 @@ struct StatusData;
 class StatusTask final : public Task
 {
 public:
-	explicit StatusTask(const RepoConfig& config, StatusData& data);
+	explicit StatusTask(RepoOrchestrator* repo_orchestrator, StepData& step);
 
-private:
-	StatusData& data;
-
-	void Run() override;
+	bool Run() override;
+	std::string_view GetCommand() override;
 };

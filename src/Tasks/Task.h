@@ -1,48 +1,31 @@
 #pragma once
 #include <atomic>
-#include <list>
-#include <thread>
+#include <string_view>
 
-#include "Nodes/ControllerNode.h"
-
-struct RepoConfig;
+struct StepData;
+class RepoOrchestrator;
 
 class Task
 {
 public:
-	explicit Task(const RepoConfig& repo_config);
+	explicit Task(RepoOrchestrator* parent, StepData& step_data);
 	virtual ~Task();
-
-	void Launch();
-	void NotifyOnEnd(const std::shared_ptr<ControllerNode>& node);
-	void NotifyOnError(const std::shared_ptr<ControllerNode>& node);
-	void ForceStop();
-
-	std::shared_ptr<ControllerNode> GetSimpleNotifier();
-	void InvokeSuccess();
 
 	Task(const Task& other) = delete;
 	Task(Task&& other) noexcept = delete;
 	Task& operator=(const Task& other) = delete;
 	Task& operator=(Task&& other) noexcept = delete;
 
+	virtual bool Run() = 0;
+	virtual std::string_view GetCommand() = 0;
+
+	void Stop();
+
 protected:
-	const RepoConfig& repo_config;
+	RepoOrchestrator* parent;
+	StepData& step_data;
 
-	std::thread running_thread;
-	std::list<std::shared_ptr<ControllerNode>> attached_nodes;
-	std::list<std::shared_ptr<ControllerNode>> error_nodes;
-
-	std::atomic<bool> should_stop = false;
-	std::atomic<bool> error_encountered = false;
-
-private:
-	void InternalRun();
-	virtual void Run() = 0;
-
-	std::atomic<bool> is_complete = false;
-
-	void NotifyNodes(const std::list<std::shared_ptr<ControllerNode>>& nodes);
+	std::atomic<bool> should_stop;
 };
 
-#define TASK_RUNNER_CHECK if(should_stop)return
+#define TASK_RUNNER_CHECK if(should_stop)return false
