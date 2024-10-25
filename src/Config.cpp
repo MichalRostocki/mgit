@@ -13,7 +13,7 @@ namespace
 bool RepoConfig::Validate()
 {
 	const std::filesystem::path filepath{ path };
-    if (!exists(filepath) || !GitExists(filepath))
+    if (!exists(filepath))
         return false;
 
     repo_name = filepath.filename().string();
