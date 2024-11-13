@@ -8,7 +8,7 @@ PipelineDisplay::PipelineDisplay(const MultiControllerTasks& data) :
 	data_collection(data)
 {
 	for (const auto& d : data)
-		max_name_space = std::max(d.second->GetConfig().repo_name.size(), max_name_space);
+		max_name_space = std::max(d.second->GetConfig().repo_name.size() + d.second->GetRepositoryInfo().sub_repo_level * 2, max_name_space);
 	max_name_space += 4;
 	start_point = std::chrono::system_clock::now();
 }
@@ -25,8 +25,9 @@ size_t PipelineDisplay::Print(std::ostream& output, bool will_exit)
 	for (const auto& d : data_collection)
 	{
 		const auto& repo_data = d.second;
-		const auto repo_status = repo_data->GetCurrentStatus();
-		const auto repo_config = repo_data->GetConfig();
+		const auto& repo_status = repo_data->GetCurrentStatus();
+		const auto& repo_config = repo_data->GetConfig();
+		const auto& repo_info = repo_data->GetRepositoryInfo();
 
 		if (!first_ongoing && repo_status == OrchestratorStatus::Ongoing)
 			first_ongoing = &d;
@@ -35,9 +36,13 @@ size_t PipelineDisplay::Print(std::ostream& output, bool will_exit)
 			first_failed = &d;
 		
 		lines_written++;
+
+		for (size_t i = 0; i < repo_info.sub_repo_level; ++i)
+			output << "  ";
+
 		output << ' ' << repo_config.repo_name;
 		
-		auto spaces_needed = max_name_space - repo_config.repo_name.size();
+		auto spaces_needed = max_name_space - repo_config.repo_name.size() - repo_info.sub_repo_level * 2;
 		for (size_t i = 0; i < spaces_needed; ++i)
 			output << ' ';
 

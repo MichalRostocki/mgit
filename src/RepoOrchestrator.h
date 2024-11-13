@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <mutex>
 #include <set>
 #include <thread>
@@ -29,10 +30,12 @@ public:
 	bool HasError() const;
 	bool IsComplete() const;
 
-	void Register(RepoOrchestrator* notified);
+	void RegisterSubmodule(const std::unique_ptr<RepoOrchestrator>& child);
+	void RegisterListener(RepoOrchestrator* notified);
 	void Notify(const std::string& notifier);
 
 	void PlanStatusJob();
+	void PlanPullPrepareJob();
 	void PlanBuildJobs();
 
 	const RepoConfig& GetConfig() const;
@@ -44,9 +47,11 @@ public:
 	std::string_view GetErrorString() const;
 	std::string GetActiveOutput() const;
 
+
 private:
 	const RepoConfig& repo_config;
 	RepositoryInformation info;
+	std::set<RepoOrchestrator*> children;
 
 	std::mutex mutex;
 	std::set<std::string> await_list;

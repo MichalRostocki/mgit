@@ -18,8 +18,9 @@ struct RepositoryInformation
 	std::atomic<bool> is_repo_found{ true };
 	std::atomic<bool> is_repo_detached{ false };
 	std::atomic<bool> no_of_files_complete{ false };
+	std::atomic<bool> has_incoming{ false };
 
-	explicit RepositoryInformation(size_t sub_repo_level);
+	RepositoryInformation(size_t sub_repo_level);
 };
 
 struct StepData

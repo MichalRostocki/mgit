@@ -14,6 +14,7 @@ public:
     bool LoadConfig(std::ostream& error_stream);
 
     int DisplayStatus();
+    int Pull();
     int Build();
 
     const RepoConfig* GetRepo(const std::string_view& repo_name) const;

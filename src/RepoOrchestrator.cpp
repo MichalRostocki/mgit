@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "Tasks/CommandTask.h"
+#include "Tasks/PullPrepareTask.h"
 #include "Tasks/StatusTask.h"
 
 RepoOrchestrator::RepoOrchestrator(const RepoConfig& repo_config, const size_t sub_repo_level) :
@@ -49,7 +50,12 @@ bool RepoOrchestrator::IsComplete() const
 	return current_task_index > last_task;
 }
 
-void RepoOrchestrator::Register(RepoOrchestrator* notified)
+void RepoOrchestrator::RegisterSubmodule(const std::unique_ptr<RepoOrchestrator>& child)
+{
+	children.insert(child.get());
+}
+
+void RepoOrchestrator::RegisterListener(RepoOrchestrator* notified)
 {
 	registered_to_notify.insert(notified);
 }
@@ -65,6 +71,13 @@ void RepoOrchestrator::PlanStatusJob()
 {
 	auto step_data = std::make_shared<StepData>(steps.size());
 	step_data->task = std::make_unique<StatusTask>(this, *step_data);
+	steps.push_back(std::move(step_data));
+}
+
+void RepoOrchestrator::PlanPullPrepareJob()
+{
+	auto step_data = std::make_shared<StepData>(steps.size());
+	step_data->task = std::make_unique<PullPrepareTask>(this, *step_data);
 	steps.push_back(std::move(step_data));
 }
 

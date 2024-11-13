@@ -19,6 +19,7 @@ set(HEADERS
     src/Displays/StatusDisplay.h
 
     src/Tasks/CommandTask.h
+    src/Tasks/PullPrepareTask.h
     src/Tasks/StatusTask.h
     src/Tasks/Task.h
 )
@@ -37,6 +38,7 @@ set(SOURCES
     src/Displays/StatusDisplay.cpp
 
     src/Tasks/CommandTask.cpp
+    src/Tasks/PullPrepareTask.cpp
     src/Tasks/StatusTask.cpp
     src/Tasks/Task.cpp
 )

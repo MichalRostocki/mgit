@@ -56,7 +56,6 @@ bool MultiController::LoadConfig(std::ostream& error_stream)
 
 int MultiController::DisplayStatus()
 {
-
 	std::function<void(const RepoConfig&, size_t)> register_function = [&register_function, this
 		](const RepoConfig& repo_config, size_t sub_level)
 	{
@@ -77,6 +76,33 @@ int MultiController::DisplayStatus()
 	StatusDisplay display(tasks);
 
 	const int result = RunTask(display);
+	tasks.Clear();
+	return result;
+}
+
+int MultiController::Pull()
+{
+	std::function<void(const std::unique_ptr<RepoOrchestrator>&, const RepoConfig&, size_t level)> register_prepare = [&register_prepare, this]
+		(const std::unique_ptr<RepoOrchestrator>& parent, const RepoConfig& repo_config, const size_t level)
+	{
+		auto orchestrator = std::make_unique<RepoOrchestrator>(repo_config, level);
+		orchestrator->PlanPullPrepareJob();
+
+		if (parent)
+			parent->RegisterSubmodule(orchestrator);
+
+		const auto& orchestrator_ptr = tasks.Emplace(repo_config.repo_name, std::move(orchestrator));
+	
+		for (const auto& sub_repo : repo_config.sub_repos)
+			register_prepare(orchestrator, sub_repo, level + 1);
+	};
+
+	for (const auto& repo_config : config.repositories)
+		register_prepare(nullptr, repo_config, 0);
+
+	PipelineDisplay display(tasks);
+	const int result = RunTask(display);
+
 	tasks.Clear();
 	return result;
 }
@@ -107,7 +133,7 @@ int MultiController::Build()
 			if(required_it != tasks.end())
 			{
 				const auto& required_task = required_it->second;
-				required_task->Register(task.get());
+				required_task->RegisterListener(task.get());
 			}
 			else
 			{

@@ -72,6 +72,20 @@ int BuildRepos()
     return ctr.Build();
 }
 
+int PullRepos()
+{
+    MultiController ctr;
+    std::ostringstream error_stream;
+
+    if (!ctr.LoadConfig(error_stream))
+    {
+        std::cout << error_stream.rdbuf();
+        return 1;
+    }
+
+    return ctr.Pull();
+}
+
 int HandleCommand(const std::string_view& command, const std::vector<std::string>& args)
 {
     if(command == "help")
@@ -80,6 +94,8 @@ int HandleCommand(const std::string_view& command, const std::vector<std::string
         return DisplayStatus();
     if (command == "build")
         return BuildRepos();
+    if (command == "pull")
+        return PullRepos();
 
     return TryActivateRepo(command, args);
 }

@@ -33,16 +33,18 @@ public:
 		return data.size();
 	}
 
-	void Emplace(const Key& key, const Value& value)
+	const Value& Emplace(const Key& key, const Value& value)
 	{
 		auto it = Find(key);
 		if(it != end())
 		{
 			it->second = value;
+			return it->second;
 		}
 		else
 		{
 			data.push_back(std::make_pair<>(key, value));
+			return data.back().second;
 		}
 	}
 
