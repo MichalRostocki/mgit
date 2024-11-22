@@ -30,9 +30,11 @@ public:
 	bool HasError() const;
 	bool IsComplete() const;
 
-	void RegisterSubmodule(const std::unique_ptr<RepoOrchestrator>& child);
 	void RegisterListener(RepoOrchestrator* notified);
 	void Notify(const std::string& notifier);
+
+	void RegisterChild(const std::shared_ptr<RepoOrchestrator>& child);
+	const std::set<std::shared_ptr<RepoOrchestrator>>& GetChildren() const;
 
 	void PlanStatusJob();
 	void PlanPullPrepareJob();
@@ -51,7 +53,7 @@ public:
 private:
 	const RepoConfig& repo_config;
 	RepositoryInformation info;
-	std::set<RepoOrchestrator*> children;
+	std::set<std::shared_ptr<RepoOrchestrator>> children;
 
 	std::mutex mutex;
 	std::set<std::string> await_list;

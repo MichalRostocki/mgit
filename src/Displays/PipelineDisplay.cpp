@@ -97,26 +97,26 @@ size_t PipelineDisplay::Print(std::ostream& output, bool will_exit)
 			std::string stage = stage_stream.str();
 	
 			output << std::endl
-				<< Clear << "Currently running: " << repo_data->GetConfig().repo_name << std::endl
-				<< Clear << " - Stage: " << stage << std::endl
-				<< Clear << " -  Progress: " << std::endl
-				<< Clear << "   " << str << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl;
+				<< ClearSymbol << "Currently running: " << repo_data->GetConfig().repo_name << std::endl
+				<< ClearSymbol << " - Stage: " << stage << std::endl
+				<< ClearSymbol << " -  Progress: " << std::endl
+				<< ClearSymbol << "   " << str << std::endl
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl;
 	
 			lines_written += std::ranges::count(str, '\n') + 9;
 		}
 		else
 		{
 			output << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl
-				<< Clear << std::endl;
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl
+				<< ClearSymbol << std::endl;
 		}
 	}
 

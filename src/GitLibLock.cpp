@@ -196,11 +196,14 @@ bool GitLibLock::HasIncoming()
 	const auto branch = git_reference_shorthand(head);
 	const auto remote_branch = std::string{ "refs/remotes/origin/" } + branch;
 
-	if(git_reference_name_to_id(&local_oid, repository, branch) &&
-		git_reference_name_to_id(&local_oid, repository, remote_branch.c_str()))
+	const auto local_res = git_reference_name_to_id(&local_oid, repository, "HEAD");
+	const auto remote_res = git_reference_name_to_id(&remote_oid, repository, remote_branch.c_str());
+
+	if(local_res == GIT_OK && remote_res == GIT_OK)
 	{
 		size_t ahead, behind;
-		if(git_graph_ahead_behind(&ahead, &behind, repository, &local_oid, &remote_oid) == 0)
+		const auto ab_res = git_graph_ahead_behind(&ahead, &behind, repository, &local_oid, &remote_oid);
+		if(ab_res == GIT_OK)
 			return behind != 0;
 	}
 

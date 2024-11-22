@@ -50,9 +50,14 @@ bool RepoOrchestrator::IsComplete() const
 	return current_task_index > last_task;
 }
 
-void RepoOrchestrator::RegisterSubmodule(const std::unique_ptr<RepoOrchestrator>& child)
+void RepoOrchestrator::RegisterChild(const std::shared_ptr<RepoOrchestrator>& child)
 {
-	children.insert(child.get());
+	children.insert(child);
+}
+
+const std::set<std::shared_ptr<RepoOrchestrator>>& RepoOrchestrator::GetChildren() const 
+{
+	return children;
 }
 
 void RepoOrchestrator::RegisterListener(RepoOrchestrator* notified)

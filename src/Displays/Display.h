@@ -19,5 +19,5 @@ public:
 	Display& operator=(Display&& other) noexcept = delete;
 
 protected:
-	static constexpr const char* Clear = "\33[2K\r";
+	static constexpr const char* ClearSymbol = "\33[2K\r";
 };
