@@ -13,9 +13,9 @@ StatusTask::StatusTask(RepoOrchestrator* repo_orchestrator, StepData& step) :
 bool StatusTask::Run()
 {
     GitLibLock git;
-    auto& info = parent->GetRepositoryInfo();
+    auto& info = GetRepositoryInformation();
 
-    if (!git.OpenRepo(parent->GetConfig().path))
+    if (!git.OpenRepo(GetConfig().path))
     {
         info.is_repo_found = false;
         step_data.error = "Couldn't find repository";

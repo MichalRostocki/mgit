@@ -158,6 +158,7 @@ int MultiController::Pull()
 		if (simple_pull.empty() && complicated_pull.empty())
 		{
 			std::cout << "No pull needed" << std::endl;
+			tasks.Clear();
 			return 0;
 		}
 
@@ -180,7 +181,7 @@ int MultiController::Pull()
 		if(!complicated_pull.empty())
 		{
 			std::cout << "MGit has problems with pull for those repos: " << std::endl;
-			for (const auto& repo : simple_pull)
+			for (const auto& repo : complicated_pull)
 				std::cout << '\t' << repo->GetConfig().repo_name << std::endl;
 			std::cout << std::endl;
 
@@ -193,6 +194,7 @@ int MultiController::Pull()
 			if(input.size() != 1 || !(input[0] == 'y' || input[0] == 'Y'))
 			{
 				std::cout << "Aborting";
+				tasks.Clear();
 				return 1;
 			}
 		}
@@ -200,7 +202,28 @@ int MultiController::Pull()
 
 	tasks.Clear();
 
-	return 0;
+	{ // Plan tasks
+		no_pull_needed.clear();
+
+		for (const auto& repo : simple_pull)
+		{
+			repo->ClearSteps();
+			repo->PlanPullJob();
+			tasks.Emplace(repo->GetConfig().repo_name, repo);
+		}
+
+		for (const auto& repo : complicated_pull)
+		{
+			repo->ClearSteps();
+			repo->PlanCheckoutPullJob();
+			tasks.Emplace(repo->GetConfig().repo_name, repo);
+		}
+
+		PipelineDisplay prepare_display(tasks);
+		const int result = RunTask(prepare_display);
+		tasks.Clear();
+		return result;
+	}
 }
 
 int MultiController::Build()

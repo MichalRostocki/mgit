@@ -26,6 +26,7 @@ public:
 		std::function<int(unsigned, unsigned, size_t)>& progress_callback);
 	bool Fetch(std::function<int(const char*)>& remote_text_callback,
 		std::function<int(unsigned, unsigned, size_t)>& progress_callback);
+	bool Pull();
 
 	bool FullCheckoutToIndex();
 

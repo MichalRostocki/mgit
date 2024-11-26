@@ -17,9 +17,12 @@ set(HEADERS
     src/Displays/Display.h
     src/Displays/PipelineDisplay.h
     src/Displays/StatusDisplay.h
-
+    
+    src/Tasks/CheckoutTask.h
+    src/Tasks/CleanupTask.h
     src/Tasks/CommandTask.h
     src/Tasks/PullPrepareTask.h
+    src/Tasks/PullTask.h
     src/Tasks/StatusTask.h
     src/Tasks/Task.h
 )
@@ -36,9 +39,12 @@ set(SOURCES
     src/Displays/Display.cpp
     src/Displays/PipelineDisplay.cpp
     src/Displays/StatusDisplay.cpp
-
+    
+    src/Tasks/CheckoutTask.cpp
+    src/Tasks/CleanupTask.cpp
     src/Tasks/CommandTask.cpp
     src/Tasks/PullPrepareTask.cpp
+    src/Tasks/PullTask.cpp
     src/Tasks/StatusTask.cpp
     src/Tasks/Task.cpp
 )

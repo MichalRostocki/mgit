@@ -26,9 +26,6 @@ private:
 	bool Prepare(GitLibLock& git);
 	bool Fetch(GitLibLock& git); 
 	bool Compare(GitLibLock& git);
-
-	virtual const RepoConfig& GetConfig() const;
-	virtual RepositoryInformation& GetRepositoryInformation() const;
 };
 
 class SubmodulePullPrepareTask final : public PullPrepareTask
@@ -39,7 +36,6 @@ public:
 private:
 	const RepoConfig& GetConfig() const override;
 	RepositoryInformation& GetRepositoryInformation() const override;
-	std::string_view GetCommand() override;
 
 	const RepoConfig& submodule_config;
 	RepositoryInformation& submodule_information;

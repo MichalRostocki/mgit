@@ -125,7 +125,7 @@ CommandTask::CommandTask(RepoOrchestrator* repo_orchestrator, StepData& step, st
 
 bool CommandTask::Run()
 {
-	const auto& config = parent->GetConfig();
+	const auto& config = GetConfig();
 
 	std::filesystem::path working_dir = config.path;
 	working_dir.append(config.build.working_dir);

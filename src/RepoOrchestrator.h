@@ -1,5 +1,4 @@
 #pragma once
-#include <map>
 #include <mutex>
 #include <set>
 #include <thread>
@@ -39,6 +38,9 @@ public:
 	void PlanStatusJob();
 	void PlanPullPrepareJob();
 	void PlanBuildJobs();
+	void PlanPullJob();
+	void PlanCheckoutPullJob();
+	void ClearSteps();
 
 	const RepoConfig& GetConfig() const;
 	RepositoryInformation& GetRepositoryInfo();
@@ -48,7 +50,6 @@ public:
 	std::string_view GetActiveCommand() const;
 	std::string_view GetErrorString() const;
 	std::string GetActiveOutput() const;
-
 
 private:
 	const RepoConfig& repo_config;
@@ -69,6 +70,7 @@ private:
 	std::atomic<bool> should_stop{ false };
 	std::jthread running_thread;
 
+	void PlanCheckoutPullJob(const RepoConfig& config);
 	void PlanBuildJobs(const std::vector<std::string>& jobs);
 	void CreateAwaitList();
 

@@ -2,6 +2,8 @@
 #include <atomic>
 #include <string_view>
 
+struct RepositoryInformation;
+struct RepoConfig;
 struct StepData;
 class RepoOrchestrator;
 
@@ -22,10 +24,15 @@ public:
 	void Stop();
 
 protected:
-	RepoOrchestrator* parent;
 	StepData& step_data;
 
 	std::atomic<bool> should_stop;
+
+	virtual const RepoConfig& GetConfig() const;
+	virtual RepositoryInformation& GetRepositoryInformation() const;
+
+private:
+	RepoOrchestrator* parent;
 };
 
 #define TASK_RUNNER_CHECK if(should_stop)return false

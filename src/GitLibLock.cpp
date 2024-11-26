@@ -69,6 +69,16 @@ namespace ConnectToRemoteUtils
 		const unsigned total = progress->total_deltas + progress->total_objects * 2;
 		return fetch_data->transfer_callback(processed, total, progress->received_bytes);
 	}
+
+	int CopyOid(const char* _, const char* unused,
+		const git_oid* oid, const unsigned int is_merge, void* payload)
+	{
+		if(is_merge)
+		{
+			memcpy(payload, oid, sizeof(git_oid));
+		}
+		return 0;
+	}
 }
 
 bool GitLibLock::ConnectToRemote()
@@ -118,6 +128,35 @@ bool GitLibLock::Fetch(std::function<int(const char*)>& remote_text_callback,
 
 	const auto error = git_remote_fetch(remote, nullptr, &fetch_options, nullptr);
 	return error == GIT_OK;
+}
+
+bool GitLibLock::Pull()
+{
+	if (!repository)
+		return false;
+
+	if (!remote)
+		if (!LookupRemote())
+			return false;
+
+
+	using namespace ConnectToRemoteUtils;
+
+	git_oid merge_oid;
+	git_repository_fetchhead_foreach(repository, CopyOid, &merge_oid);
+
+	git_annotated_commit* merge_head;
+	const auto error = git_annotated_commit_lookup(&merge_head, repository, &merge_oid);
+	if (error != GIT_OK)
+		return false;
+
+	git_checkout_options checkout_options = GIT_CHECKOUT_OPTIONS_INIT;
+	checkout_options.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	const auto merge_error = git_reset_from_annotated(repository, merge_head, GIT_RESET_HARD, &checkout_options);
+
+	git_annotated_commit_free(merge_head);
+	return merge_error == GIT_OK;
 }
 
 bool GitLibLock::FullCheckoutToIndex()

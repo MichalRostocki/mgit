@@ -1,8 +1,11 @@
 #include "RepoOrchestrator.h"
 
 #include "Config.h"
+#include "Tasks/CheckoutTask.h"
+#include "Tasks/CleanupTask.h"
 #include "Tasks/CommandTask.h"
 #include "Tasks/PullPrepareTask.h"
+#include "Tasks/PullTask.h"
 #include "Tasks/StatusTask.h"
 
 RepoOrchestrator::RepoOrchestrator(const RepoConfig& repo_config, const size_t sub_repo_level) :
@@ -24,6 +27,9 @@ void RepoOrchestrator::Stop()
 	should_stop = true;
 	for (const auto & step_data : steps)
 		step_data->task->Stop();
+
+	if(running_thread.joinable())
+		running_thread.join();
 }
 
 OrchestratorStatus RepoOrchestrator::GetCurrentStatus() const
@@ -100,6 +106,44 @@ void RepoOrchestrator::PlanBuildJobs()
 	CreateAwaitList();
 }
 
+void RepoOrchestrator::PlanPullJob()
+{
+	auto step_data = std::make_shared<StepData>(steps.size());
+	step_data->task = std::make_unique<PullTask>(this, *step_data);
+	steps.push_back(std::move(step_data));
+}
+
+void RepoOrchestrator::PlanCheckoutPullJob()
+{
+	auto checkout_step_data = std::make_shared<StepData>(steps.size());
+	checkout_step_data->task = std::make_unique<CheckoutTask>(this, *checkout_step_data);
+	steps.push_back(std::move(checkout_step_data));
+
+	auto cleanup_step_data = std::make_shared<StepData>(steps.size());
+	cleanup_step_data->task = std::make_unique<CleanupTask>(this, *cleanup_step_data);
+	steps.push_back(std::move(cleanup_step_data));
+
+	auto pull_step_data = std::make_shared<StepData>(steps.size());
+	pull_step_data->task = std::make_unique<PullTask>(this, *pull_step_data);
+	steps.push_back(std::move(pull_step_data));
+
+	for (const auto& child : repo_config.sub_repos)
+		PlanCheckoutPullJob(child);
+
+	last_task = static_cast<int64_t>(steps.size()) - 1;
+}
+
+void RepoOrchestrator::ClearSteps()
+{
+	Stop();
+
+	last_task = 0;
+	current_task_index = -1;
+	error_encountered = false;
+	should_stop = false;
+	steps.clear();
+}
+
 const RepoConfig& RepoOrchestrator::GetConfig() const
 {
 	return repo_config;
@@ -149,6 +193,24 @@ std::string RepoOrchestrator::GetActiveOutput() const
 	if (index == -1 || index >= static_cast<int64_t>(steps.size()))
 		return {};
 	return steps[index]->output.str();
+}
+
+void RepoOrchestrator::PlanCheckoutPullJob(const RepoConfig& config)
+{
+	auto checkout_step_data = std::make_shared<StepData>(steps.size());
+	checkout_step_data->task = std::make_unique<TargetedCheckoutTask>(this, *checkout_step_data, config);
+	steps.push_back(std::move(checkout_step_data));
+
+	auto cleanup_step_data = std::make_shared<StepData>(steps.size());
+	cleanup_step_data->task = std::make_unique<TargetedCleanupTask>(this, *cleanup_step_data, config);
+	steps.push_back(std::move(cleanup_step_data));
+
+	auto pull_step_data = std::make_shared<StepData>(steps.size());
+	pull_step_data->task = std::make_unique<TargetedPullTask>(this, *pull_step_data, config);
+	steps.push_back(std::move(pull_step_data));
+
+	for (const auto& child : config.sub_repos)
+		PlanCheckoutPullJob(child);
 }
 
 void RepoOrchestrator::PlanBuildJobs(const std::vector<std::string>& jobs)

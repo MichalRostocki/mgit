@@ -85,16 +85,17 @@ int PullPrepareTask::FetchTransferCommand(const unsigned processed, const unsign
 
 bool PullPrepareTask::Prepare(GitLibLock& git)
 {
-	auto& info = parent->GetRepositoryInfo();
+	auto& info = GetRepositoryInformation();
+	const auto& config = GetConfig();
 
 	status = PullPrepareStatus::OpeningRepo;
-	if (!git.OpenRepo(parent->GetConfig().path))
+	if (!git.OpenRepo(config.path))
 	{
 		info.is_repo_found = false;
 		step_data.error = "Couldn't find repository";
 		return false;
 	}
-	step_data.output << "Repository " << parent->GetConfig().repo_name << " found" << std::endl;
+	step_data.output << "Repository " << config.repo_name << " found" << std::endl;
 
 	TASK_RUNNER_CHECK;
 
@@ -169,7 +170,7 @@ bool PullPrepareTask::Compare(GitLibLock& git)
 {
 	status = PullPrepareStatus::Comparing;
 
-	auto& info = parent->GetRepositoryInfo();
+	auto& info = GetRepositoryInformation();
 	auto is_detached = false;
 
 	if (!git.GetBranchData(is_detached, info.current_branch))
@@ -199,16 +200,6 @@ bool PullPrepareTask::Compare(GitLibLock& git)
 	return true;
 }
 
-const RepoConfig& PullPrepareTask::GetConfig() const
-{
-	return parent->GetConfig();
-}
-
-RepositoryInformation& PullPrepareTask::GetRepositoryInformation() const 
-{
-	return parent->GetRepositoryInfo();
-}
-
 SubmodulePullPrepareTask::SubmodulePullPrepareTask(RepoOrchestrator* repo_orchestrator, StepData& step,
 	const RepoConfig& submodule_config, RepositoryInformation& submodule_information) :
 	PullPrepareTask(repo_orchestrator, step),
@@ -225,9 +216,4 @@ const RepoConfig& SubmodulePullPrepareTask::GetConfig() const
 RepositoryInformation& SubmodulePullPrepareTask::GetRepositoryInformation() const
 {
 	return submodule_information;
-}
-
-std::string_view SubmodulePullPrepareTask::GetCommand()
-{
-	return PullPrepareTask::GetCommand();
 }
