@@ -263,13 +263,13 @@ void RepoOrchestrator::InternalRun()
 		const bool result = current_step->task->Run();
 		current_step->completed = true;
 
+		if (should_stop)
+			return;
+
 		if(!result)
 			HandleError();
 		else
 			++current_task_index;
-
-		if (should_stop)
-			return;
 	}
 
 	for (auto* to_notify : registered_to_notify)

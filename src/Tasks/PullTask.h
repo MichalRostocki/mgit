@@ -1,14 +1,11 @@
 #pragma once
-#include "Task.h"
+#include "CommandTask.h"
 
-struct RepoConfig;
-
-class PullTask : public Task
+class PullTask : public CommandTask
 {
 public:
 	explicit PullTask(RepoOrchestrator* repo_orchestrator, StepData& step);
 
-	bool Run() override;
 	std::string_view GetCommand() override;
 };
 

@@ -3,7 +3,7 @@
 
 #include "Task.h"
 
-class CommandTask final : public Task
+class CommandTask : public Task
 {
 public:
 	explicit CommandTask(RepoOrchestrator* repo_orchestrator, StepData& step, std::string command);

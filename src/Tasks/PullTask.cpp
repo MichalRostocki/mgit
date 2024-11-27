@@ -1,35 +1,10 @@
 #include "PullTask.h"
 
-#include <ostream>
-
-#include "Config.h"
-#include "GitLibLock.h"
-#include "Data/Data.h"
+constexpr auto PullCommand = "git pull";
 
 PullTask::PullTask(RepoOrchestrator* repo_orchestrator, StepData& step) :
-	Task(repo_orchestrator, step)
+	CommandTask(repo_orchestrator, step, PullCommand)
 {
-}
-
-bool PullTask::Run()
-{
-	GitLibLock git;
-	const auto& config = GetConfig();
-
-	if (!git.OpenRepo(config.path))
-	{
-		step_data.error = "Couldn't find repository";
-		return false;
-	}
-	step_data.output << "Repository " << config.repo_name << " found" << std::endl;
-
-	if (!git.Pull())
-	{
-		step_data.error = "Failed to pull";
-		return false;
-	}
-
-	return true;
 }
 
 std::string_view PullTask::GetCommand()
