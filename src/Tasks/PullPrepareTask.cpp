@@ -4,7 +4,7 @@
 #include "GitLibLock.h"
 #include "RepoOrchestrator.h"
 
-enum class PullPrepareStatus
+enum class PullPrepareStatus : uint8_t
 {
 	Preparing,
 	OpeningRepo,
@@ -68,7 +68,7 @@ int PullPrepareTask::FetchRemoteCommand(const char* str)
 	if (should_stop)
 		return -1;
 
-	step_data.output << "remote: " << str << std::endl;
+	step_data.output << "remote: " << str << '\n';
 	return 0;
 }
 
@@ -81,7 +81,7 @@ int PullPrepareTask::FetchTransferCommand(const unsigned processed, const unsign
 	step_data.output << "Processed: "
 		<< processed << " / "<< total
 		<< " (" << 100.f * (static_cast<float>(processed) / static_cast<float>(total)) << "): "
-		<< bytes << "bytes" << std::endl;
+		<< bytes << "bytes" << '\n';
 	return 0;
 }
 
@@ -97,7 +97,7 @@ bool PullPrepareTask::Prepare(GitLibLock& git)
 		step_data.error = "Couldn't find repository";
 		return false;
 	}
-	step_data.output << "Repository " << config.repo_name << " found" << std::endl;
+	step_data.output << "Repository " << config.repo_name << " found" << '\n';
 
 	TASK_RUNNER_CHECK;
 
@@ -115,7 +115,7 @@ bool PullPrepareTask::Prepare(GitLibLock& git)
 		return false;
 	}
 
-	step_data.output << "Current branch is " << info.current_branch << std::endl;
+	step_data.output << "Current branch is " << info.current_branch << '\n';
 
 	TASK_RUNNER_CHECK;
 
@@ -126,7 +126,7 @@ bool PullPrepareTask::Prepare(GitLibLock& git)
 		return false;
 	}
 
-	step_data.output << "Remote origin found" << std::endl;
+	step_data.output << "Remote origin found" << '\n';
 
 	TASK_RUNNER_CHECK;
 
@@ -153,7 +153,7 @@ bool PullPrepareTask::Fetch(GitLibLock& git)
 		return false;
 	}
 
-	step_data.output << "Connected to repository origin" << std::endl;
+	step_data.output << "Connected to repository origin" << '\n';
 	status = PullPrepareStatus::Fetching;
 
 	if(!git.Fetch(remote_text_func, transfer_func, DefaultRemote))
@@ -164,7 +164,7 @@ bool PullPrepareTask::Fetch(GitLibLock& git)
 
 	TASK_RUNNER_CHECK;
 
-	step_data.output << "Fetched data from remote repository" << std::endl;
+	step_data.output << "Fetched data from remote repository" << '\n';
 	return true;
 }
 
@@ -183,13 +183,13 @@ bool PullPrepareTask::Compare(GitLibLock& git)
 
 	info.is_repo_detached = is_detached;
 	if (is_detached)
-		return true; // repo is detached, we won't modify it anyways
+		return true; // repo is detached, we won't modify it anyway
 
 	TASK_RUNNER_CHECK;
 
 	if (git.HasIncoming())
 		info.has_incoming = true;
-	else return true; // nothing is incoming, we won't modify it anyways
+	else return true; // nothing is incoming, we won't modify it anyway
 
 	TASK_RUNNER_CHECK;
 
