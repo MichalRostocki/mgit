@@ -36,14 +36,19 @@ bool GitLibLock::OpenRepo(const std::string_view& path)
 	return git_repository_open_ext(&repository, path.data(), GIT_REPOSITORY_OPEN_NO_SEARCH, "") == GIT_ERROR_NONE;
 }
 
-bool GitLibLock::LookupRemote()
+bool GitLibLock::LookupRemote(const std::string_view& name)
 {
 	if (!repository)
 		return false;
 
-	if (!remote)
-		if (git_remote_lookup(&remote, repository, "origin") != GIT_ERROR_NONE)
-			return false;
+	if (remote)
+	{
+		git_remote_free(remote);
+		remote = nullptr;
+	}
+
+	if (git_remote_lookup(&remote, repository, name.data()) != GIT_ERROR_NONE)
+		return false;
 
 	return true;
 }
@@ -81,20 +86,20 @@ namespace ConnectToRemoteUtils
 	}
 }
 
-bool GitLibLock::ConnectToRemote()
+bool GitLibLock::ConnectToRemote(const std::string_view& remote_name)
 {
 	std::function<int(const char*)> f1 = [](const char*) {return 0; };
 	std::function<int(unsigned, unsigned, size_t)> f2 = [](unsigned, unsigned, size_t) {return 0; };
 
-	return ConnectToRemote(f1, f2);
+	return ConnectToRemote(f1, f2, remote_name);
 }
 
 bool GitLibLock::ConnectToRemote(std::function<int(const char*)>& remote_text_callback,
-                                 std::function<int(unsigned, unsigned, size_t)>& progress_callback)
+                                 std::function<int(unsigned, unsigned, size_t)>& progress_callback,	
+								 const std::string_view& remote_name)
 {
-	if (!remote)
-		if (!LookupRemote())
-			return false;
+	if (!LookupRemote(remote_name))
+		return false;
 
 	using namespace ConnectToRemoteUtils;
 	ConnectData connect_data{ remote_text_callback, progress_callback };
@@ -109,14 +114,14 @@ bool GitLibLock::ConnectToRemote(std::function<int(const char*)>& remote_text_ca
 }
 
 bool GitLibLock::Fetch(std::function<int(const char*)>& remote_text_callback,
-	std::function<int(unsigned, unsigned, size_t)>& progress_callback)
+	std::function<int(unsigned, unsigned, size_t)>& progress_callback,
+	const std::string_view& remote_name)
 {
 	if (!repository)
 		return false;
 
-	if (!remote)
-		if (!LookupRemote())
-			return false;
+	if (!LookupRemote(remote_name))
+		return false;
 
 	using namespace ConnectToRemoteUtils;
 	ConnectData connect_data{ remote_text_callback, progress_callback };
@@ -130,14 +135,13 @@ bool GitLibLock::Fetch(std::function<int(const char*)>& remote_text_callback,
 	return error == GIT_OK;
 }
 
-bool GitLibLock::Pull()
+bool GitLibLock::Pull(const std::string_view& remote_name)
 {
 	if (!repository)
 		return false;
 
-	if (!remote)
-		if (!LookupRemote())
-			return false;
+	if (!LookupRemote(remote_name))
+		return false;
 
 
 	using namespace ConnectToRemoteUtils;

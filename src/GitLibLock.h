@@ -20,13 +20,15 @@ public:
 	~GitLibLock();
 
 	bool OpenRepo(const std::string_view& path);
-	bool LookupRemote();
-	bool ConnectToRemote();
+	bool LookupRemote(const std::string_view& name);
+	bool ConnectToRemote(const std::string_view& remote_name);
 	bool ConnectToRemote(std::function<int(const char*)>& remote_text_callback,
-		std::function<int(unsigned, unsigned, size_t)>& progress_callback);
+		std::function<int(unsigned, unsigned, size_t)>& progress_callback,
+		const std::string_view& remote_name);
 	bool Fetch(std::function<int(const char*)>& remote_text_callback,
-		std::function<int(unsigned, unsigned, size_t)>& progress_callback);
-	bool Pull();
+		std::function<int(unsigned, unsigned, size_t)>& progress_callback,
+		const std::string_view& remote_name);
+	bool Pull(const std::string_view& remote_name);
 
 	bool FullCheckoutToIndex();
 

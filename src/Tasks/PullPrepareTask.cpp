@@ -28,6 +28,8 @@ namespace
 		{PullPrepareStatus::Comparing, "Comparing remote and local"},
 		{PullPrepareStatus::Complete, "Complete"},
 	};
+
+	auto DefaultRemote = "origin";
 }
 
 PullPrepareTask::PullPrepareTask(RepoOrchestrator* repo_orchestrator, StepData& step) :
@@ -118,7 +120,7 @@ bool PullPrepareTask::Prepare(GitLibLock& git)
 	TASK_RUNNER_CHECK;
 
 	status = PullPrepareStatus::RemoteLookup;
-	if (!git.LookupRemote())
+	if (!git.LookupRemote(DefaultRemote))
 	{
 		step_data.error = "Failed to lookup remote origin";
 		return false;
@@ -145,7 +147,7 @@ bool PullPrepareTask::Fetch(GitLibLock& git)
 		return FetchTransferCommand(processed, total, bytes);
 	};
 
-	if (!git.ConnectToRemote(remote_text_func, transfer_func))
+	if (!git.ConnectToRemote(remote_text_func, transfer_func, DefaultRemote))
 	{
 		step_data.error = "Failed to connect to repository origin";
 		return false;
@@ -154,7 +156,7 @@ bool PullPrepareTask::Fetch(GitLibLock& git)
 	step_data.output << "Connected to repository origin" << std::endl;
 	status = PullPrepareStatus::Fetching;
 
-	if(!git.Fetch(remote_text_func, transfer_func))
+	if(!git.Fetch(remote_text_func, transfer_func, DefaultRemote))
 	{
 		step_data.error = "Failed to fetch remote repository";
 		return false;
