@@ -108,9 +108,18 @@ void RepoOrchestrator::PlanBuildJobs()
 
 void RepoOrchestrator::PlanPullJob()
 {
+	if (!repo_config.local_repo.empty() && info.current_branch == repo_config.local_repo)
+	{
+		auto local_step_data = std::make_shared<StepData>(steps.size());
+		local_step_data->task = std::make_unique<LocalPullTask>(this, *local_step_data);
+		steps.push_back(std::move(local_step_data));
+	}
+
 	auto step_data = std::make_shared<StepData>(steps.size());
 	step_data->task = std::make_unique<PullTask>(this, *step_data);
 	steps.push_back(std::move(step_data));
+
+	last_task = static_cast<int64_t>(steps.size()) - 1;
 }
 
 void RepoOrchestrator::PlanCheckoutPullJob()
@@ -122,6 +131,13 @@ void RepoOrchestrator::PlanCheckoutPullJob()
 	auto cleanup_step_data = std::make_shared<StepData>(steps.size());
 	cleanup_step_data->task = std::make_unique<CleanupTask>(this, *cleanup_step_data);
 	steps.push_back(std::move(cleanup_step_data));
+
+	if (!repo_config.local_repo.empty() && info.current_branch == repo_config.local_repo)
+	{
+		auto local_step_data = std::make_shared<StepData>(steps.size());
+		local_step_data->task = std::make_unique<LocalPullTask>(this, *local_step_data);
+		steps.push_back(std::move(local_step_data));
+	}
 
 	auto pull_step_data = std::make_shared<StepData>(steps.size());
 	pull_step_data->task = std::make_unique<PullTask>(this, *pull_step_data);

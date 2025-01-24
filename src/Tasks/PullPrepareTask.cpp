@@ -9,25 +9,44 @@ enum class PullPrepareStatus : uint8_t
 	Preparing,
 	OpeningRepo,
 	CheckingHead,
+
+	LocalLookup,
 	RemoteLookup,
+
+	LocalConnect,
+	FetchingLocal,
+
 	RemoteConnect,
-	Fetching,
+	FetchingRemote,
+
 	Comparing,
 	Complete
 };
 
 namespace
 {
-	const std::map<PullPrepareStatus, std::string> StatusStrings{
-		{PullPrepareStatus::Preparing, "Preparing pull check"},
-		{PullPrepareStatus::OpeningRepo, "Opening repository"},
-		{PullPrepareStatus::CheckingHead, "Ensuring repo is not detached"},
-		{PullPrepareStatus::RemoteLookup, "Looking up remote repository"},
-		{PullPrepareStatus::RemoteConnect, "Connecting to remote repository"},
-		{PullPrepareStatus::Fetching, "Fetching content"},
-		{PullPrepareStatus::Comparing, "Comparing remote and local"},
-		{PullPrepareStatus::Complete, "Complete"},
-	};
+	const char* ToString(const PullPrepareStatus e)
+	{
+		switch (e)
+		{
+		case PullPrepareStatus::Preparing: return "Preparing pull check";
+		case PullPrepareStatus::OpeningRepo: return "Opening repository";
+		case PullPrepareStatus::CheckingHead: return "Ensuring repo is not detached";
+
+		case PullPrepareStatus::LocalLookup: return "Looking up local repository";
+		case PullPrepareStatus::RemoteLookup: return "Looking up remote repository";
+
+		case PullPrepareStatus::LocalConnect: return "Connecting to local repository";
+		case PullPrepareStatus::FetchingLocal: return "Fetching local repository";
+
+		case PullPrepareStatus::RemoteConnect: return "Connecting to remote repository";
+		case PullPrepareStatus::FetchingRemote: return "Fetching remote repository";
+
+		case PullPrepareStatus::Comparing: return "Comparing remote and local";
+		case PullPrepareStatus::Complete: return "Complete";
+		default: return "Fetching";
+		}
+	}
 
 	auto DefaultRemote = "origin";
 }
@@ -56,10 +75,7 @@ bool PullPrepareTask::Run()
 
 std::string_view PullPrepareTask::GetCommand()
 {
-	const auto it = StatusStrings.find(status);
-	if (it != StatusStrings.end())
-		return it->second;
-	return "Fetching...";
+	return ToString(status);
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
@@ -119,6 +135,18 @@ bool PullPrepareTask::Prepare(GitLibLock& git)
 
 	TASK_RUNNER_CHECK;
 
+	if (!config.local_repo.empty())
+	{
+		status = PullPrepareStatus::LocalLookup;
+		if (!git.LookupRemote(config.local_repo))
+		{
+			step_data.error = "Failed to lookup remote " + config.local_repo;
+			return false;
+		}
+	}
+
+	TASK_RUNNER_CHECK;
+
 	status = PullPrepareStatus::RemoteLookup;
 	if (!git.LookupRemote(DefaultRemote))
 	{
@@ -135,7 +163,7 @@ bool PullPrepareTask::Prepare(GitLibLock& git)
 
 bool PullPrepareTask::Fetch(GitLibLock& git)
 {
-	status = PullPrepareStatus::RemoteConnect;
+	auto config = GetConfig();
 
 	std::function<int(const char*)> remote_text_func = [this](const char* str)
 	{
@@ -147,14 +175,41 @@ bool PullPrepareTask::Fetch(GitLibLock& git)
 		return FetchTransferCommand(processed, total, bytes);
 	};
 
+
+	if (!config.local_repo.empty())
+	{
+		status = PullPrepareStatus::LocalConnect;
+		if (!git.ConnectToRemote(remote_text_func, transfer_func, config.local_repo))
+		{
+			step_data.error = "Failed to connect to repository " + config.local_repo;
+			return false;
+		}
+
+		step_data.output << "Connected to repository " + config.local_repo << '\n';
+		status = PullPrepareStatus::FetchingLocal;
+
+		TASK_RUNNER_CHECK;
+
+		if (!git.Fetch(remote_text_func, transfer_func, config.local_repo))
+		{
+			step_data.error = "Failed to fetch local repository";
+			return false;
+		}
+	}
+
+	TASK_RUNNER_CHECK;
+
+	status = PullPrepareStatus::RemoteConnect;
 	if (!git.ConnectToRemote(remote_text_func, transfer_func, DefaultRemote))
 	{
 		step_data.error = "Failed to connect to repository origin";
 		return false;
 	}
 
-	step_data.output << "Connected to repository origin" << '\n';
-	status = PullPrepareStatus::Fetching;
+	step_data.output << "Connected to repository origin\n";
+	status = PullPrepareStatus::FetchingRemote;
+
+	TASK_RUNNER_CHECK;
 
 	if(!git.Fetch(remote_text_func, transfer_func, DefaultRemote))
 	{

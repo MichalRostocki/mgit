@@ -76,6 +76,8 @@ void from_json(const nlohmann::json& j, RepoConfig& p)
         j.at("sub_repos").get_to(p.sub_repos);
     if (j.contains("build"))
         j.at("build").get_to(p.build);
+    if (j.contains("local_repo"))
+        j.at("local_repo").get_to(p.local_repo);
 }
 
 // ReSharper disable once CppInconsistentNaming

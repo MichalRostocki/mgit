@@ -20,3 +20,11 @@ protected:
 private:
 	const RepoConfig& targeted_config;
 };
+
+class LocalPullTask : public CommandTask
+{
+public:
+	explicit LocalPullTask(RepoOrchestrator* repo_orchestrator, StepData& step);
+
+	std::string_view GetCommand() override;
+};

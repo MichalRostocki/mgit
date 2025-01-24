@@ -21,6 +21,7 @@ struct RepoConfig
 {
     std::string path;
     std::string default_branch;
+    std::string local_repo;
     bool hidden = false;
 
     std::vector<RepoConfig> sub_repos;

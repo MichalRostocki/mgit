@@ -6,7 +6,7 @@
 struct RepoConfig;
 struct RepositoryInformation;
 class GitLibLock;
-enum class PullPrepareStatus;
+enum class PullPrepareStatus : uint8_t;
 
 class PullPrepareTask : public Task
 {
