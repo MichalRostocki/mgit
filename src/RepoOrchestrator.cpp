@@ -6,6 +6,7 @@
 #include "Tasks/CommandTask.h"
 #include "Tasks/PullPrepareTask.h"
 #include "Tasks/PullTask.h"
+#include "Tasks/PushTask.h"
 #include "Tasks/StatusTask.h"
 
 RepoOrchestrator::RepoOrchestrator(const RepoConfig& repo_config, const size_t sub_repo_level) :
@@ -80,16 +81,12 @@ void RepoOrchestrator::Notify(const std::string& notifier)
 
 void RepoOrchestrator::PlanStatusJob()
 {
-	auto step_data = std::make_shared<StepData>(steps.size());
-	step_data->task = std::make_unique<StatusTask>(this, *step_data);
-	steps.push_back(std::move(step_data));
+	PlanJob<StatusTask>();
 }
 
 void RepoOrchestrator::PlanPullPrepareJob()
 {
-	auto step_data = std::make_shared<StepData>(steps.size());
-	step_data->task = std::make_unique<PullPrepareTask>(this, *step_data);
-	steps.push_back(std::move(step_data));
+	PlanJob<PullPrepareTask>();
 }
 
 void RepoOrchestrator::PlanBuildJobs()
@@ -108,40 +105,33 @@ void RepoOrchestrator::PlanBuildJobs()
 
 void RepoOrchestrator::PlanPullJob()
 {
-	if (!repo_config.local_repo.empty() && info.current_branch == repo_config.local_repo)
-	{
-		auto local_step_data = std::make_shared<StepData>(steps.size());
-		local_step_data->task = std::make_unique<LocalPullTask>(this, *local_step_data);
-		steps.push_back(std::move(local_step_data));
-	}
+	const bool has_local = !repo_config.local_repo.empty() && info.current_branch == repo_config.default_branch;
 
-	auto step_data = std::make_shared<StepData>(steps.size());
-	step_data->task = std::make_unique<PullTask>(this, *step_data);
-	steps.push_back(std::move(step_data));
+	if (has_local)
+		PlanJob<LocalPullTask>();
+
+	PlanJob<PullTask>();
+
+	if (has_local)
+		PlanJob<PushLocalTask>();
 
 	last_task = static_cast<int64_t>(steps.size()) - 1;
 }
 
 void RepoOrchestrator::PlanCheckoutPullJob()
 {
-	auto checkout_step_data = std::make_shared<StepData>(steps.size());
-	checkout_step_data->task = std::make_unique<CheckoutTask>(this, *checkout_step_data);
-	steps.push_back(std::move(checkout_step_data));
+	const bool has_local = !repo_config.local_repo.empty() && info.current_branch == repo_config.default_branch;
 
-	auto cleanup_step_data = std::make_shared<StepData>(steps.size());
-	cleanup_step_data->task = std::make_unique<CleanupTask>(this, *cleanup_step_data);
-	steps.push_back(std::move(cleanup_step_data));
+	PlanJob<CheckoutTask>();
+	PlanJob<CleanupTask>();
 
-	if (!repo_config.local_repo.empty() && info.current_branch == repo_config.local_repo)
-	{
-		auto local_step_data = std::make_shared<StepData>(steps.size());
-		local_step_data->task = std::make_unique<LocalPullTask>(this, *local_step_data);
-		steps.push_back(std::move(local_step_data));
-	}
+	if (has_local)
+		PlanJob<LocalPullTask>();
 
-	auto pull_step_data = std::make_shared<StepData>(steps.size());
-	pull_step_data->task = std::make_unique<PullTask>(this, *pull_step_data);
-	steps.push_back(std::move(pull_step_data));
+	PlanJob<PullTask>();
+
+	if (has_local)
+		PlanJob<PushLocalTask>();
 
 	for (const auto& child : repo_config.sub_repos)
 		PlanCheckoutPullJob(child);
@@ -290,4 +280,12 @@ void RepoOrchestrator::InternalRun()
 
 	for (auto* to_notify : registered_to_notify)
 		to_notify->Notify(repo_config.repo_name);
+}
+
+template <class TJob>
+void RepoOrchestrator::PlanJob()
+{
+	auto step = std::make_shared<StepData>(steps.size());
+	step->task = std::make_unique<TJob>(this, *step);
+	steps.push_back(std::move(step));
 }

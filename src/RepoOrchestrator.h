@@ -74,6 +74,9 @@ private:
 	void PlanBuildJobs(const std::vector<std::string>& jobs);
 	void CreateAwaitList();
 
+	template<class TJob>
+	void PlanJob();
+
 	void HandleError();	
 	void InternalRun();
 };

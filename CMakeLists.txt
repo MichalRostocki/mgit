@@ -23,6 +23,7 @@ set(HEADERS
     src/Tasks/CommandTask.h
     src/Tasks/PullPrepareTask.h
     src/Tasks/PullTask.h
+    src/Tasks/PushTask.h
     src/Tasks/StatusTask.h
     src/Tasks/Task.h
 )
@@ -45,6 +46,7 @@ set(SOURCES
     src/Tasks/CommandTask.cpp
     src/Tasks/PullPrepareTask.cpp
     src/Tasks/PullTask.cpp
+    src/Tasks/PushTask.cpp
     src/Tasks/StatusTask.cpp
     src/Tasks/Task.cpp
 )
