@@ -24,7 +24,7 @@ private:
 	PullPrepareStatus status;
 
 	bool Prepare(GitLibLock& git);
-	bool Fetch(GitLibLock& git); 
+	bool FetchRemote(GitLibLock& git, const std::string_view& remote, const PullPrepareStatus remote_enum);
 	bool Compare(GitLibLock& git);
 };
 

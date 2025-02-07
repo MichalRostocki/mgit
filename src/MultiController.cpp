@@ -111,22 +111,27 @@ int MultiController::Pull()
 		}
 	}
 
+	std::set<std::shared_ptr<RepoOrchestrator>> only_local_pulls;
 	std::set<std::shared_ptr<RepoOrchestrator>> simple_pull;
 	std::set<std::shared_ptr<RepoOrchestrator>> complicated_pull;
 	std::set<std::shared_ptr<RepoOrchestrator>> no_pull_needed;
 
 	{// Check if any tasks require user attention
 		std::function<bool(const std::shared_ptr<RepoOrchestrator>&)> needs_sub_repo_pull =
-			[&needs_sub_repo_pull](const std::shared_ptr<RepoOrchestrator >& input)
+			[&](const std::shared_ptr<RepoOrchestrator >& input)
 		{
+			if (input->GetRepositoryInfo().has_only_local)
+				only_local_pulls.insert(input);
+
 			if (input->GetRepositoryInfo().has_incoming)
 				return true;
 
+			bool needs_pull = false;
 			for (const auto& child : input->GetChildren())
 				if (needs_sub_repo_pull(child))
-					return true;
+					needs_pull = true;
 
-			return false;
+			return needs_pull;
 		};
 
 		for (const std::pair<const std::string, std::shared_ptr<RepoOrchestrator>>& task : tasks)
@@ -137,6 +142,9 @@ int MultiController::Pull()
 
 			if(repo_config.sub_repo_level == 0) // submodules are handled with parent repo
 			{
+				if (repo_info.has_only_local)
+					only_local_pulls.insert(orchestrator);
+
 				if (!repo_config.sub_repos.empty())
 				{
 					if (needs_sub_repo_pull(orchestrator))
@@ -154,6 +162,14 @@ int MultiController::Pull()
 
 	{ // Check for user agreement
 		std::cout << std::endl << std::endl;
+
+		if (!only_local_pulls.empty())
+		{
+			std::cout << "Some repositories cannot connect to the remote and have only local repository available\n";
+			for (const auto& repo : only_local_pulls)
+				std::cout << '\t' << repo->GetConfig().repo_name << '\n';
+			std::cout << '\n';
+		}
 
 		if (simple_pull.empty() && complicated_pull.empty())
 		{

@@ -19,6 +19,7 @@ struct RepositoryInformation
 	std::atomic<bool> is_repo_detached{ false };
 	std::atomic<bool> no_of_files_complete{ false };
 	std::atomic<bool> has_incoming{ false };
+	std::atomic<bool> has_only_local{ false };
 
 	RepositoryInformation(size_t sub_repo_level);
 };

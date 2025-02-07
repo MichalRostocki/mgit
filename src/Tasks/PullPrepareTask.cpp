@@ -10,18 +10,51 @@ enum class PullPrepareStatus : uint8_t
 	OpeningRepo,
 	CheckingHead,
 
-	LocalLookup,
 	RemoteLookup,
-
-	LocalConnect,
-	FetchingLocal,
-
 	RemoteConnect,
 	FetchingRemote,
 
+	LocalLookup,
+	LocalConnect,
+	FetchingLocal,
+
 	Comparing,
-	Complete
+	Complete,
+
+	// special
+	RemoteStandard = RemoteLookup,
+	RemoteLocal = LocalLookup
 };
+
+namespace
+{
+	PullPrepareStatus PpsConnect(const PullPrepareStatus remote_enum)
+	{
+		switch (remote_enum)
+		{
+		case PullPrepareStatus::RemoteStandard:
+			return PullPrepareStatus::RemoteConnect;
+		case PullPrepareStatus::RemoteLocal:
+			return PullPrepareStatus::LocalConnect;
+		default:
+			throw std::exception("PpsConnect failure");
+		}
+
+	}
+
+	PullPrepareStatus PpsFetching(const PullPrepareStatus remote_enum)
+	{
+		switch (remote_enum)
+		{
+		case PullPrepareStatus::RemoteStandard:
+			return PullPrepareStatus::FetchingRemote;
+		case PullPrepareStatus::RemoteLocal:
+			return PullPrepareStatus::FetchingLocal;
+		default:
+			throw std::exception("PpsLookup failure");
+		}
+	}
+}
 
 namespace
 {
@@ -44,8 +77,9 @@ namespace
 
 		case PullPrepareStatus::Comparing: return "Comparing remote and local";
 		case PullPrepareStatus::Complete: return "Complete";
-		default: return "Fetching";
 		}
+
+		return "Fetching...";
 	}
 
 	auto DefaultRemote = "origin";
@@ -64,8 +98,25 @@ bool PullPrepareTask::Run()
 	if (!Prepare(git))
 		return false;
 
-	if (!Fetch(git))
+	const auto& config = GetConfig();
+	bool local_status = false;
+	if (!config.local_repo.empty())
+		local_status = FetchRemote(git, config.local_repo, PullPrepareStatus::RemoteLocal);
+	TASK_RUNNER_CHECK;
+
+	const bool remote_status = FetchRemote(git, DefaultRemote, PullPrepareStatus::RemoteStandard);
+	TASK_RUNNER_CHECK;
+
+	if (!local_status && !remote_status)
+	{
+		step_data.error = "No remote found";
 		return false;
+	}
+
+	if (!remote_status && local_status)
+		GetRepositoryInformation().has_only_local = true;
+
+	TASK_RUNNER_CHECK;
 
 	if (!Compare(git))
 		return false;
@@ -133,38 +184,11 @@ bool PullPrepareTask::Prepare(GitLibLock& git)
 
 	step_data.output << "Current branch is " << info.current_branch << '\n';
 
-	TASK_RUNNER_CHECK;
-
-	if (!config.local_repo.empty())
-	{
-		status = PullPrepareStatus::LocalLookup;
-		if (!git.LookupRemote(config.local_repo))
-		{
-			step_data.error = "Failed to lookup remote " + config.local_repo;
-			return false;
-		}
-	}
-
-	TASK_RUNNER_CHECK;
-
-	status = PullPrepareStatus::RemoteLookup;
-	if (!git.LookupRemote(DefaultRemote))
-	{
-		step_data.error = "Failed to lookup remote origin";
-		return false;
-	}
-
-	step_data.output << "Remote origin found" << '\n';
-
-	TASK_RUNNER_CHECK;
-
 	return true;
 }
 
-bool PullPrepareTask::Fetch(GitLibLock& git)
+bool PullPrepareTask::FetchRemote(GitLibLock& git, const std::string_view& remote, const PullPrepareStatus remote_enum)
 {
-	auto config = GetConfig();
-
 	std::function<int(const char*)> remote_text_func = [this](const char* str)
 	{
 		return FetchRemoteCommand(str);
@@ -175,52 +199,36 @@ bool PullPrepareTask::Fetch(GitLibLock& git)
 		return FetchTransferCommand(processed, total, bytes);
 	};
 
-
-	if (!config.local_repo.empty())
+	if (!remote.empty())
 	{
-		status = PullPrepareStatus::LocalConnect;
-		if (!git.ConnectToRemote(remote_text_func, transfer_func, config.local_repo))
+		status = remote_enum;
+
+		if (git.LookupRemote(remote))
 		{
-			step_data.error = "Failed to connect to repository " + config.local_repo;
-			return false;
+			step_data.output << "Remote " << remote << " found\n";
+
+			TASK_RUNNER_CHECK;
+			status = PpsConnect(remote_enum);
+
+			if (git.ConnectToRemote(remote))
+			{
+				step_data.output << "Connected to repository " << remote << '\n';
+
+				TASK_RUNNER_CHECK;
+				status = PpsFetching(remote_enum);
+
+				if (git.Fetch(remote_text_func, transfer_func, remote))
+				{
+					step_data.output << "Fetched data from repository " << remote << '\n';
+					return true;
+				}
+			}
+			else step_data.output << "Failed to connect to remote " << remote << '\n';
 		}
-
-		step_data.output << "Connected to repository " + config.local_repo << '\n';
-		status = PullPrepareStatus::FetchingLocal;
-
-		TASK_RUNNER_CHECK;
-
-		if (!git.Fetch(remote_text_func, transfer_func, config.local_repo))
-		{
-			step_data.error = "Failed to fetch local repository";
-			return false;
-		}
+		else step_data.output << "Failed to lookup remote " << remote << '\n';
 	}
 
-	TASK_RUNNER_CHECK;
-
-	status = PullPrepareStatus::RemoteConnect;
-	if (!git.ConnectToRemote(remote_text_func, transfer_func, DefaultRemote))
-	{
-		step_data.error = "Failed to connect to repository origin";
-		return false;
-	}
-
-	step_data.output << "Connected to repository origin\n";
-	status = PullPrepareStatus::FetchingRemote;
-
-	TASK_RUNNER_CHECK;
-
-	if(!git.Fetch(remote_text_func, transfer_func, DefaultRemote))
-	{
-		step_data.error = "Failed to fetch remote repository";
-		return false;
-	}
-
-	TASK_RUNNER_CHECK;
-
-	step_data.output << "Fetched data from remote repository" << '\n';
-	return true;
+	return false;
 }
 
 bool PullPrepareTask::Compare(GitLibLock& git)
